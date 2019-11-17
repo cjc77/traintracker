@@ -16,4 +16,5 @@ class PlotType(IntEnum):
 class Cmd(IntEnum):
     server_shutdown = 1
     add_plot = 2
+    start_plot_server = 3
 

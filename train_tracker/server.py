@@ -10,13 +10,15 @@ from train_tracker.util.defs import *
 
 
 class Server:
-    _sources: Dict[PlotType, Dict] = {
+    _source_formats: Dict[PlotType, Dict] = {
         PlotType.random: {'x': [], 'y': []},
     }
 
     def __init__(self, host: str, port: int):
         self._host = host
         self._port = port
+        self._reader: Optional[StreamReader]
+        self._writer: Optional[StreamWriter]
         self._plot_server: Optional[BokehServer] = None
         self._plot_server_port: int = PS_PORT
         self._sources: Dict[PlotType, ColumnDataSource] = {}
@@ -36,24 +38,42 @@ class Server:
             await server.serve_forever()
 
     async def handle_serving(self, reader: StreamReader, writer: StreamWriter) -> None:
+        self._writer = writer
+        self._reader = reader
+
         while True:
-            cmd = await reader.read(BUFFSIZE)
+            cmd = await self._reader.read(BUFFSIZE)
             cmd = int.from_bytes(cmd, BYTEORDER)
             print(f"Received: {cmd}")
-            # Acknowledge command
-            writer.write(cmd.to_bytes(INT32, BYTEORDER))
-            await writer.drain()
+
+            # Send Ack
+            self._writer.write(cmd.to_bytes(INT32, BYTEORDER))
+            await self._writer.drain()
+
+            # If command is server_shutdown, this is a special case
             if cmd == Cmd.server_shutdown:
-                print(f"Closing connection.")
-                writer.close()
+                print(f"Closing connection...")
+                self._writer.close()
                 asyncio.get_event_loop().stop()
 
+            # Handle command
+            await self.handle_cmd(Cmd(cmd))
+
     async def handle_cmd(self, cmd: Cmd) -> None:
-        pass
+        print(f"Command: {cmd.name}")
+        if cmd == Cmd.add_plot:
+            plot_type = await self._reader.read(BUFFSIZE)
+            plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
+            self.add_plot(plot_type)
+            print(self._plots)
+            self._writer.write(plot_type.to_bytes(INT32, BYTEORDER))
+            await self._writer.drain()
+        elif cmd == Cmd.start_plot_server:
+            self.start_plot_server()
 
     def add_plot(self, plot_type) -> None:
         if plot_type not in self._sources:
-            self._sources[plot_type] = ColumnDataSource(self._sources[plot_type])
+            self._sources[plot_type] = ColumnDataSource(self._source_formats[plot_type])
             self._plots[plot_type] = self._build_plot(plot_type)
 
     def make_document(self, doc: Document) -> None:
@@ -72,7 +92,7 @@ class Server:
         self._plot_server = BokehServer({'/': self.make_document}, port=self._plot_server_port, num_procs=1)
         self._plot_server.start()
         self._plot_server.io_loop.add_callback(self._plot_server.show, "/")
-        self._plot_server.io_loop.start()
+        # self._plot_server.io_loop.start()
 
     def _build_plot(self, plot_type: PlotType) -> Figure:
         if plot_type == PlotType.random:
