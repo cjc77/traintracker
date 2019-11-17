@@ -8,8 +8,10 @@ def main():
     pc = Client("127.0.0.1", PORT)
     pc.connect()
     pc.add_plot(PlotType.random)
+    pc.add_plot(PlotType.test_line_plt)
     pc.start_plot_server()
-    time.sleep(10)
+    pc.update_plot(PlotType.test_line_plt, (1, 2))
+    time.sleep(5)
     pc.shutdown_server()
     pc.close_connection()
 

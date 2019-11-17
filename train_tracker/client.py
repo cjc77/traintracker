@@ -1,4 +1,6 @@
 import socket
+import numpy as np
+import pickle
 
 from train_tracker.util.defs import *
 
@@ -25,6 +27,21 @@ class Client:
         ack = self._socket.recv(BUFFSIZE)
         ack = int.from_bytes(ack, BYTEORDER)
         assert ack == plot_type, FAIL_MSG.format("plot type")
+
+    def update_plot(self, plot_type: PlotType, new_data: Sequence) -> None:
+        self.send_cmd(Cmd.update_plot)
+        self._socket.sendall(plot_type.to_bytes(INT32, BYTEORDER))
+        ack = self._socket.recv(BUFFSIZE)
+        ack = int.from_bytes(ack, BYTEORDER)
+        assert ack == plot_type, FAIL_MSG.format("plot type")
+        print("sent plot type")
+        expected_data_len = len(new_data)
+        new_data: np.array = np.array(new_data, dtype=np.float32)
+        print(f"Sending data: {new_data}")
+        self._socket.sendall(new_data.tobytes())
+        ack = self._socket.recv(BUFFSIZE)
+        ack = int.from_bytes(ack, BYTEORDER)
+        assert ack == expected_data_len, FAIL_MSG.format("data length")
 
     def start_plot_server(self) -> None:
         self.send_cmd(Cmd.start_plot_server)

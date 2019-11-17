@@ -1,6 +1,8 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 import random
+import queue
+import numpy as np
 from bokeh.server.server import Server as BokehServer
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.document.document import Document
@@ -12,6 +14,7 @@ from train_tracker.util.defs import *
 class Server:
     _source_formats: Dict[PlotType, Dict] = {
         PlotType.random: {'x': [], 'y': []},
+        PlotType.test_line_plt: {'x': [], 'y': []}
     }
 
     def __init__(self, host: str, port: int):
@@ -23,6 +26,7 @@ class Server:
         self._plot_server_port: int = PS_PORT
         self._sources: Dict[PlotType, ColumnDataSource] = {}
         self._plots: Dict[PlotType, Figure] = {}
+        self._queues: Dict[PlotType, queue] = {}
 
     def run(self) -> None:
         try:
@@ -61,11 +65,21 @@ class Server:
 
     async def handle_cmd(self, cmd: Cmd) -> None:
         print(f"Command: {cmd.name}")
-        if cmd == Cmd.add_plot:
+        if cmd == Cmd.update_plot:
+            plot_type = await self._reader.read(BUFFSIZE)
+            plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
+            print(f"Updating: {plot_type.name}")
+            self._writer.write(plot_type.to_bytes(INT32, BYTEORDER))
+            await self._writer.drain()
+            new_data: NDArray = np.frombuffer(await self._reader.read(BUFFSIZE), dtype=np.float32)
+            print(new_data)
+            self._writer.write(len(new_data).to_bytes(INT32, BYTEORDER))
+            await self._writer.drain()
+        elif cmd == Cmd.add_plot:
             plot_type = await self._reader.read(BUFFSIZE)
             plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
             self.add_plot(plot_type)
-            print(self._plots)
+            print(f"Plots: {self._plots}")
             self._writer.write(plot_type.to_bytes(INT32, BYTEORDER))
             await self._writer.drain()
         elif cmd == Cmd.start_plot_server:
@@ -87,6 +101,8 @@ class Server:
         if PlotType.random in self._plots:
             new = {'x': [random.random()], 'y': [random.random()]}
             self._sources[PlotType.random].stream(new)
+        if PlotType.test_line_plt in self._plots:
+            pass
 
     def start_plot_server(self) -> None:
         self._plot_server = BokehServer({'/': self.make_document}, port=self._plot_server_port, num_procs=1)
@@ -98,6 +114,9 @@ class Server:
         if plot_type == PlotType.random:
             fig = figure(title="Random")
             fig.circle(source=self._sources[plot_type], x='x', y='y', size=10)
+        elif plot_type == PlotType.test_line_plt:
+            fig = figure(title="Test Line")
+            fig.line(source=self._sources[plot_type], x='x', y='y')
         else:
             raise ValueError(f"Bad plot type argument ({plot_type.name})")
         return fig
