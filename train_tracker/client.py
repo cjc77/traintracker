@@ -76,6 +76,23 @@ class Tracker(ABC):
         pass
 
 
+class TrainValLossTracker(Tracker):
+    def __init__(self, client: Client):
+        super(TrainValLossTracker, self).__init__(client, plot_type=PlotType.train_val_loss)
+        self._train: List[float] = []
+        self._val: List[float] = []
+        self._epochs: List[int] = []
+
+        self._add_to_server()
+
+    def update(self, train: float, val: float, epoch: int) -> None:
+        new_data: NDArray = np.array([train, val, epoch], dtype=np.float32)
+        self._train.append(train)
+        self._val.append(val)
+        self._epochs.append(epoch)
+        self._client.update_plot(self.plot_type, new_data)
+
+
 class RandomTracker(Tracker):
     def __init__(self, client: Client):
         super(RandomTracker, self).__init__(client, plot_type=PlotType.random)

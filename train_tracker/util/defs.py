@@ -18,6 +18,7 @@ NP_ORDER: Dict[str, str] = {
 
 
 class PlotType(IntEnum):
+    train_val_loss = 1
     test_line_plt = 99
     random = 100
 
