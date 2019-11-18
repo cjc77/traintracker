@@ -13,6 +13,7 @@ from train_tracker.util.defs import *
 
 class Server:
     _source_formats: Dict[PlotType, Dict] = {
+        PlotType.train_val_loss: {"train": [], "val": [], "epoch": []},
         PlotType.random: {'x': [], 'y': []},
         PlotType.test_line_plt: {'x': [], 'y': []}
     }
@@ -97,7 +98,6 @@ class Server:
             self._start_plot_server()
 
     async def _handle_plot_update(self, plot_type: PlotType) -> None:
-        # if plot_type == PlotType.test_line_plt:
         new_data: NDArray = np.frombuffer(await self._reader.read(BUFFSIZE), dtype=np.float32)
         print(f"Received data: {new_data}")
         await self._write_and_drain(len(new_data).to_bytes(INT32, BYTEORDER))
@@ -108,7 +108,13 @@ class Server:
         await self._writer.drain()
 
     def _build_plot(self, plot_type: PlotType) -> Figure:
-        if plot_type == PlotType.random:
+        if plot_type == PlotType.train_val_loss:
+            fig = figure(title="Train/Validation Loss")
+            fig.line(source=self._sources[plot_type], x="epoch", y="train", color="blue", legend="training loss")
+            fig.line(source=self._sources[plot_type], x="epoch", y="val", color="orange", legend="validation loss")
+            fig.xaxis.axis_label = "Epoch"
+            fig.yaxis.axis_label = "Loss"
+        elif plot_type == PlotType.random:
             fig = figure(title="Random")
             fig.circle(source=self._sources[plot_type], x='x', y='y', size=10)
         elif plot_type == PlotType.test_line_plt:
@@ -125,17 +131,21 @@ class Server:
             self._queues[plot_type] = Queue()
 
     def _update_plots(self, doc: Document) -> None:
+        if PlotType.train_val_loss in self._plots:
+            q = self._queues[PlotType.train_val_loss]
+            while not q.empty():
+                new_data = q.get()
+                new = {"train": [new_data[0]], "val": [new_data[1]], "epoch": [new_data[2]]}
+                self._sources[PlotType.train_val_loss].stream(new)
         if PlotType.random in self._plots:
-            # new = {'x': [random.random()], 'y': [random.random()]}
-            # self._sources[PlotType.random].stream(new)
             q = self._queues[PlotType.random]
             while not q.empty():
-                new_data = self._queues[PlotType.random].get()
+                new_data = q.get()
                 new = {'x': [new_data[0]], 'y': [new_data[1]]}
                 self._sources[PlotType.random].stream(new)
         if PlotType.test_line_plt in self._plots:
             q = self._queues[PlotType.test_line_plt]
             while not q.empty():
-                new_data = self._queues[PlotType.test_line_plt].get()
+                new_data = q.get()
                 new = {'x': [new_data[0]], 'y': [new_data[1]]}
                 self._sources[PlotType.test_line_plt].stream(new)
