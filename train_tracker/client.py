@@ -1,6 +1,6 @@
 import socket
 import numpy as np
-import pickle
+from abc import ABC, abstractmethod
 
 from train_tracker.util.defs import *
 
@@ -29,12 +29,13 @@ class Client:
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
         self._safe_send(data, assertion=True, expected=plot_type, fail_msg=FAIL_MSG)
 
-    def update_plot(self, plot_type: PlotType, new_data: Sequence) -> None:
+    def update_plot(self, plot_type: PlotType, new_data: NDArray) -> None:
         self._send_cmd(Cmd.update_plot)
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
         self._safe_send(data, assertion=True, expected=plot_type, fail_msg=FAIL_MSG)
 
-        new_data: np.array = np.array(new_data, dtype=np.float32)
+        if new_data.dtype != np.float32:
+            new_data: np.array = np.array(new_data, dtype=np.float32)
         data = new_data.tobytes()
         print(f"Sending data: {new_data}")
         self._safe_send(data, assertion=True, expected=len(new_data), fail_msg=FAIL_MSG)
@@ -55,4 +56,52 @@ class Client:
             ack = self._socket.recv(buffsize)
             ack = int.from_bytes(ack, BYTEORDER)
             if assertion:
-                assert ack == expected, fail_msg.format(expected, ack) + fail_spec
+                assert ack == expected, fail_msg.format(ack, expected) + fail_spec
+
+
+class Tracker(ABC):
+    def __init__(self, client: Client, plot_type: PlotType):
+        self._client: Client = client
+        self._plot_type: PlotType = plot_type
+
+    @property
+    def plot_type(self) -> PlotType:
+        return self._plot_type
+
+    def _add_to_server(self) -> None:
+        self._client.add_plot(self._plot_type)
+
+    @abstractmethod
+    def update(self, *args) -> None:
+        pass
+
+
+class RandomTracker(Tracker):
+    def __init__(self, client: Client):
+        super(RandomTracker, self).__init__(client, plot_type=PlotType.random)
+        self._x: List[float] = []
+        self._y: List[float] = []
+
+        self._add_to_server()
+
+    def update(self) -> None:
+        new_data: NDArray = np.random.random(2)
+        self._x.append(new_data[0])
+        self._y.append(new_data[1])
+        self._client.update_plot(self._plot_type, new_data)
+
+
+class TestLineTracker(Tracker):
+    def __init__(self, client: Client):
+        super(TestLineTracker, self).__init__(client, plot_type=PlotType.test_line_plt)
+        self._x: List[float] = []
+        self._y: List[float] = []
+
+        self._add_to_server()
+
+    def update(self, x: float, y: float) -> None:
+        new_data: NDArray = np.array([x, y], dtype=np.float32)
+        self._x.append(new_data[0])
+        self._y.append(new_data[1])
+        self._client.update_plot(self._plot_type, new_data)
+
