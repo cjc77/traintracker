@@ -11,6 +11,8 @@ def main():
     pc.add_plot(PlotType.test_line_plt)
     pc.start_plot_server()
     pc.update_plot(PlotType.test_line_plt, (1, 2))
+    pc.update_plot(PlotType.test_line_plt, (3, 5))
+    pc.update_plot(PlotType.test_line_plt, (7, 10))
     time.sleep(5)
     pc.shutdown_server()
     pc.close_connection()
