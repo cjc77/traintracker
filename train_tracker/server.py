@@ -1,14 +1,48 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
-import random
 from queue import Queue
 import numpy as np
+from abc import ABC, abstractmethod
 from bokeh.server.server import Server as BokehServer
 from bokeh.plotting import figure, ColumnDataSource
 from bokeh.document.document import Document
 from bokeh.plotting.figure import Figure
 
 from train_tracker.util.defs import *
+
+
+class TrackerPlot(ABC):
+    def __init__(self, name: str, source: ColumnDataSource):
+        self._name: str = name
+        self.fig: Optional[Figure] = None
+
+        self.source: ColumnDataSource = source
+
+    @classmethod
+    def build_plot(cls, plot_type: PlotType, name: str, source: ColumnDataSource):
+        if plot_type == PlotType.train_val_loss:
+            return TrainValLossPlot(name, source)
+
+    @abstractmethod
+    def update(self, new_data) -> None:
+        pass
+
+
+class TrainValLossPlot(TrackerPlot):
+    def __init__(self, name: str, source: ColumnDataSource):
+        super(TrainValLossPlot, self).__init__(name=name, source=source)
+        self._init_figure()
+
+    def update(self, new_data) -> None:
+        new = {"train": [new_data[0]], "val": [new_data[1]], "epoch": [new_data[2]]}
+        self.source.stream(new)
+
+    def _init_figure(self) -> None:
+        self.fig = figure(title=self._name)
+        self.fig.line(source=self.source, x="epoch", y="train", color="blue", legend="training loss")
+        self.fig.line(source=self.source, x="epoch", y="val", color="orange", legend="validation loss")
+        self.fig.xaxis.axis_label = "Epoch"
+        self.fig.yaxis.axis_label = "Loss"
 
 
 class Server:
@@ -28,9 +62,8 @@ class Server:
         self._plot_server: Optional[BokehServer] = None
 
         self._sources: Dict[str, ColumnDataSource] = {}
-        self._plots: Dict[str, Figure] = {}
+        self._plots: Dict[str, TrackerPlot] = {}
         self._queues: Dict[str, Queue] = {}
-        self._plot_types: Dict[str, PlotType] = {}
 
     def run(self, host: str, port: int = PORT, plots_port: int = PS_PORT) -> None:
         self._host = host
@@ -58,7 +91,7 @@ class Server:
     def _make_document(self, doc: Document) -> None:
         doc.title = "Testing..."
         for _, plot in self._plots.items():
-            doc.add_root(plot)
+            doc.add_root(plot.fig)
 
         doc.add_periodic_callback(lambda: self._update_plots(doc), TIMEOUT)
 
@@ -115,41 +148,14 @@ class Server:
         self._writer.write(data)
         await self._writer.drain()
 
-    def _build_plot(self, plot_type: PlotType, plot_name: str) -> Figure:
-        if plot_type == PlotType.train_val_loss:
-            fig = figure(title=plot_name)
-            fig.line(source=self._sources[plot_name], x="epoch", y="train", color="blue", legend="training loss")
-            fig.line(source=self._sources[plot_name], x="epoch", y="val", color="orange", legend="validation loss")
-            fig.xaxis.axis_label = "Epoch"
-            fig.yaxis.axis_label = "Loss"
-        elif plot_type == PlotType.random:
-            fig = figure(title=plot_name)
-            fig.circle(source=self._sources[plot_name], x='x', y='y', size=10)
-        elif plot_type == PlotType.test_line_plt:
-            fig = figure(title=plot_name)
-            fig.line(source=self._sources[plot_name], x='x', y='y')
-        else:
-            raise ValueError(f"Bad plot type argument ({plot_type.name})")
-        return fig
-
     def _add_plot(self, plot_type: PlotType, plot_name: str) -> None:
-        if plot_name not in self._sources:
-            self._sources[plot_name] = ColumnDataSource(self._source_formats[plot_type])
-            self._plots[plot_name] = self._build_plot(plot_type, plot_name)
-            self._plot_types[plot_name] = plot_type
+        if plot_name not in self._plots:
+            src = ColumnDataSource(self._source_formats[plot_type])
+            self._plots[plot_name] = TrackerPlot.build_plot(plot_type, plot_name, src)
             self._queues[plot_name] = Queue()
 
     def _update_plots(self, doc: Document) -> None:
         for name, plot in self._plots.items():
             q = self._queues[name]
-            pt = self._plot_types[name]
-            if pt == PlotType.train_val_loss:
-                while not q.empty():
-                    new_data = q.get()
-                    new = {"train": [new_data[0]], "val": [new_data[1]], "epoch": [new_data[2]]}
-                    self._sources[name].stream(new)
-            elif pt == PlotType.random:
-                while not q.empty():
-                    new_data = q.get()
-                    new = {"x": [new_data[0]], "y": [new_data[1]]}
-                    self._sources[name].stream(new)
+            while not q.empty():
+                plot.update(q.get())
