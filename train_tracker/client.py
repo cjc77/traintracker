@@ -9,12 +9,14 @@ FAIL_SPEC = "Point of failure: {}"
 
 
 class Client:
-    def __init__(self, host: str, port: int):
-        self._host = host
-        self._port = port
+    def __init__(self):
+        self._host: Optional[str] = None
+        self._port: Optional[int] = None
         self._socket: Optional[socket.socket] = None
 
-    def connect(self) -> None:
+    def connect(self, host: str, port: int) -> None:
+        self._host = host
+        self._port = port
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((self._host, self._port))
 

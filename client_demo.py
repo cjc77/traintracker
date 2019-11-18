@@ -5,8 +5,8 @@ import time
 
 
 def main():
-    pc = Client("127.0.0.1", PORT)
-    pc.connect()
+    pc = Client()
+    pc.connect("127.0.0.1", PORT)
     pc.add_plot(PlotType.random)
     pc.add_plot(PlotType.test_line_plt)
     pc.start_plot_server()

@@ -17,18 +17,21 @@ class Server:
         PlotType.test_line_plt: {'x': [], 'y': []}
     }
 
-    def __init__(self, host: str, port: int):
-        self._host = host
-        self._port = port
-        self._reader: Optional[StreamReader]
-        self._writer: Optional[StreamWriter]
+    def __init__(self):
+        self._host: Optional[str] = None
+        self._port: Optional[int] = None
+        self._plot_server_port: Optional[int] = None
+        self._reader: Optional[StreamReader] = None
+        self._writer: Optional[StreamWriter] = None
         self._plot_server: Optional[BokehServer] = None
-        self._plot_server_port: int = PS_PORT
         self._sources: Dict[PlotType, ColumnDataSource] = {}
         self._plots: Dict[PlotType, Figure] = {}
         self._queues: Dict[PlotType, Queue] = {}
 
-    def run(self) -> None:
+    def run(self, host: str, port: int = PORT, plots_port: int = PS_PORT) -> None:
+        self._host = host
+        self._port = port
+        self._plot_server_port = plots_port
         try:
             asyncio.run(self._run_async())
         except RuntimeError as re:
@@ -45,6 +48,7 @@ class Server:
         self._plot_server = BokehServer({'/': self._make_document}, port=self._plot_server_port, num_procs=1)
         self._plot_server.start()
         self._plot_server.io_loop.add_callback(self._plot_server.show, "/")
+        print(f"Serving plots on port: {self._plot_server_port}")
         # self._plot_server.io_loop.start()
 
     def _make_document(self, doc: Document) -> None:
@@ -52,7 +56,7 @@ class Server:
         for _, plot in self._plots.items():
             doc.add_root(plot)
 
-        doc.add_periodic_callback(self._update_plots, TIMEOUT)
+        doc.add_periodic_callback(lambda: self._update_plots(doc), TIMEOUT)
 
     async def _handle_serving(self, reader: StreamReader, writer: StreamWriter) -> None:
         self._writer = writer
@@ -61,7 +65,7 @@ class Server:
         while True:
             cmd = await self._reader.read(BUFFSIZE)
             cmd = int.from_bytes(cmd, BYTEORDER)
-            print(f"Received: {cmd}")
+            print(f"Received command: {Cmd(cmd).name}")
 
             # Send Ack
             await self._write_and_drain(cmd.to_bytes(INT32, BYTEORDER))
@@ -77,7 +81,6 @@ class Server:
             await self._handle_cmd(Cmd(cmd))
 
     async def _handle_cmd(self, cmd: Cmd) -> None:
-        print(f"Command: {cmd.name}")
         if cmd == Cmd.update_plot:
             plot_type = await self._reader.read(BUFFSIZE)
             plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
@@ -121,7 +124,7 @@ class Server:
             self._plots[plot_type] = self._build_plot(plot_type)
             self._queues[plot_type] = Queue()
 
-    def _update_plots(self) -> None:
+    def _update_plots(self, doc: Document) -> None:
         if PlotType.random in self._plots:
             new = {'x': [random.random()], 'y': [random.random()]}
             self._sources[PlotType.random].stream(new)

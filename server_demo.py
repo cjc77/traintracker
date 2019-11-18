@@ -1,9 +1,9 @@
-from train_tracker.server import Server, PORT
+from train_tracker.server import Server, PORT, PS_PORT
 
 
 def main():
-    ps = Server("127.0.0.1", PORT)
-    ps.run()
+    ps = Server()
+    ps.run("127.0.0.1", port=PORT, plots_port=PS_PORT)
 
 
 if __name__ == '__main__':
