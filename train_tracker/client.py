@@ -98,18 +98,3 @@ class TrainValLossTracker(Tracker):
         self._val.append(val)
         self._epochs.append(epoch)
         self._client.update_plot(self._name, new_data)
-
-
-class RandomTracker(Tracker):
-    def __init__(self, client: Client, name: str):
-        super(RandomTracker, self).__init__(client, plot_type=PlotType.random, name=name)
-        self._x: List[float] = []
-        self._y: List[float] = []
-
-        self._add_to_server()
-
-    def update(self) -> None:
-        new_data: NDArray = np.random.random(2)
-        self._x.append(new_data[0])
-        self._y.append(new_data[1])
-        self._client.update_plot(self._name, new_data)
