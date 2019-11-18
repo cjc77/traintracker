@@ -97,11 +97,11 @@ class Server:
             self._start_plot_server()
 
     async def _handle_plot_update(self, plot_type: PlotType) -> None:
-        if plot_type == PlotType.test_line_plt:
-            new_data: NDArray = np.frombuffer(await self._reader.read(BUFFSIZE), dtype=np.float32)
-            print(f"Received data: {new_data}")
-            await self._write_and_drain(len(new_data).to_bytes(INT32, BYTEORDER))
-            self._queues[plot_type].put(new_data)
+        # if plot_type == PlotType.test_line_plt:
+        new_data: NDArray = np.frombuffer(await self._reader.read(BUFFSIZE), dtype=np.float32)
+        print(f"Received data: {new_data}")
+        await self._write_and_drain(len(new_data).to_bytes(INT32, BYTEORDER))
+        self._queues[plot_type].put(new_data)
 
     async def _write_and_drain(self, data: bytes) -> None:
         self._writer.write(data)
@@ -126,8 +126,13 @@ class Server:
 
     def _update_plots(self, doc: Document) -> None:
         if PlotType.random in self._plots:
-            new = {'x': [random.random()], 'y': [random.random()]}
-            self._sources[PlotType.random].stream(new)
+            # new = {'x': [random.random()], 'y': [random.random()]}
+            # self._sources[PlotType.random].stream(new)
+            q = self._queues[PlotType.random]
+            while not q.empty():
+                new_data = self._queues[PlotType.random].get()
+                new = {'x': [new_data[0]], 'y': [new_data[1]]}
+                self._sources[PlotType.random].stream(new)
         if PlotType.test_line_plt in self._plots:
             q = self._queues[PlotType.test_line_plt]
             while not q.empty():
