@@ -4,7 +4,7 @@ from queue import Queue
 import numpy as np
 from abc import ABC, abstractmethod
 from bokeh.server.server import Server as BokehServer
-from bokeh.plotting import figure, ColumnDataSource
+from bokeh.plotting import figure, ColumnDataSource, gridplot
 from bokeh.document.document import Document
 from bokeh.plotting.figure import Figure
 
@@ -90,8 +90,11 @@ class Server:
 
     def _make_document(self, doc: Document) -> None:
         doc.title = "Testing..."
-        for _, plot in self._plots.items():
-            doc.add_root(plot.fig)
+        # for _, plot in self._plots.items():
+        #     doc.add_root(plot.fig)
+        figs = [plot.fig for _, plot in self._plots.items()]
+        grid = [figs[i: i + 3] for i in range(0, len(figs), 3)]
+        doc.add_root(gridplot(grid))
 
         doc.add_periodic_callback(lambda: self._update_plots(doc), TIMEOUT)
 
