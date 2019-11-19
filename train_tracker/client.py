@@ -85,9 +85,9 @@ class Client:
 
 
 class Tracker(ABC):
-    def __init__(self, client: Client, plot_type: PlotType, name: str):
-        self._client: Client = client
+    def __init__(self, plot_type: PlotType, name: str, client: Optional[Client] = None):
         self._plot_type: PlotType = plot_type
+        self._client: Optional[Client] = client
         self._name: str = name
 
     @property
@@ -95,7 +95,13 @@ class Tracker(ABC):
         return self._plot_type
 
     def _add_to_server(self) -> None:
-        self._client.add_plot(self._plot_type, self._name)
+        if self._client:
+            self._client.add_plot(self._plot_type, self._name)
+
+    def connect_client(self, client: Client) -> None:
+        if self._client:
+            raise ValueError(f"Cannot add new client, client already exists: {self._client}")
+        self._client = client
 
     @abstractmethod
     def update(self, *args) -> None:
@@ -103,17 +109,30 @@ class Tracker(ABC):
 
 
 class TrainValLossTracker(Tracker):
-    def __init__(self, client: Client, name: str):
-        super(TrainValLossTracker, self).__init__(client, plot_type=PlotType.train_val_loss, name=name)
+    def __init__(self, name: str, client: Optional[Client] = None):
+        super(TrainValLossTracker, self).__init__(name=name, client=client, plot_type=PlotType.train_val_loss)
         self._train: List[float] = []
         self._val: List[float] = []
         self._epochs: List[int] = []
 
         self._add_to_server()
 
+    @property
+    def train_losses(self) -> NDArray:
+        return np.array(self._train)
+
+    @property
+    def val_losses(self) -> NDArray:
+        return np.array(self._val)
+
+    @property
+    def epochs(self) -> NDArray:
+        return np.array(self._epochs)
+
     def update(self, train: float, val: float, epoch: int) -> None:
-        new_data: NDArray = np.array([train, val, epoch], dtype=np.float32)
         self._train.append(train)
         self._val.append(val)
         self._epochs.append(epoch)
-        self._client.update_plot(self._name, new_data)
+        new_data: NDArray = np.array([train, val, epoch], dtype=np.float32)
+        if self._client:
+            self._client.update_plot(self._name, new_data)
