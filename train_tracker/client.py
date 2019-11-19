@@ -9,18 +9,31 @@ FAIL_SPEC = "Point of failure: {}"
 
 
 class Client:
+    """
+    A client is responsible for passing along data to the server. A client will be
+    referenced by all trackers that wish to send data to the server.
+    """
     def __init__(self):
         self._host: Optional[str] = None
         self._port: Optional[int] = None
         self._socket: Optional[socket.socket] = None
 
     def connect(self, host: str, port: int) -> None:
+        """
+        Connect client to a server.
+
+        :param host: host where server is running
+        :param port: port where server is listening
+        """
         self._host = host
         self._port = port
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((self._host, self._port))
 
     def close_connection(self) -> None:
+        """
+        Close connection with the server.
+        """
         self._socket.close()
         self._socket = None
 
@@ -43,9 +56,15 @@ class Client:
         self._safe_send(data, assertion=True, expected=len(new_data), fail_msg=FAIL_MSG)
 
     def start_plot_server(self) -> None:
+        """
+        Instruct the server to start the plot server.
+        """
         self._send_cmd(Cmd.start_plot_server)
 
     def shutdown_server(self) -> None:
+        """
+        Instruct server to shutdown (that we are done with it)
+        """
         self._send_cmd(Cmd.server_shutdown)
 
     def _send_cmd(self, cmd: Cmd) -> None:
