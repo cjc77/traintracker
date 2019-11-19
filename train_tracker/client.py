@@ -94,19 +94,21 @@ class Tracker(ABC):
     def plot_type(self) -> PlotType:
         return self._plot_type
 
-    def _add_to_server(self) -> None:
-        if self._client:
-            self._client.add_plot(self._plot_type, self._name)
-
     def connect_client(self, client: Client) -> None:
         if self._client:
             raise ValueError(f"Cannot add new client, client already exists: {self._client}")
         self._client = client
         self._add_to_server()
 
+    def _add_to_server(self) -> None:
+        if self._client:
+            self._client.add_plot(self._plot_type, self._name)
+
     @abstractmethod
-    def update(self, *args) -> None:
-        pass
+    def update(self, *args) -> None: pass
+
+    @abstractmethod
+    def get_all_tracked(self, as_np=False): pass
 
 
 class TrainValLossTracker(Tracker):
@@ -129,6 +131,11 @@ class TrainValLossTracker(Tracker):
     def get_steps(self, as_np=False) -> Union[List, NDArray]:
         if as_np:
             return np.array(self._steps)
+
+    def get_all_tracked(self, as_np=False) -> Tuple[Union[List, NDArray], Union[List, NDArray], Union[List, NDArray]]:
+        if as_np:
+            return np.array(self._train), np.array(self._val), np.array(self._steps)
+        return self._train, self._val, self._steps
 
     def update(self, train: float, val: float, step: int) -> None:
         self._train.append(train)
