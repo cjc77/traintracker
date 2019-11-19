@@ -89,7 +89,7 @@ class Server:
         # self._plot_server.io_loop.start()
 
     def _make_document(self, doc: Document) -> None:
-        doc.title = "Testing..."
+        doc.title = "Train Tracker"
         # for _, plot in self._plots.items():
         #     doc.add_root(plot.fig)
         figs = [plot.fig for _, plot in self._plots.items()]
