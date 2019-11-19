@@ -11,3 +11,5 @@ traintracker
    :hidden:
    :caption: Contents:
 
+   api.rst
+

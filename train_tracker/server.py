@@ -13,13 +13,25 @@ from train_tracker.util.defs import *
 
 class TrackerPlot(ABC):
     def __init__(self, name: str, source: ColumnDataSource):
+        """
+        A plot that corresponds with a tracker.
+
+        :param name: name of this plot
+        :param source: a columnar data source from which this plot receives updates
+        """
         self._name: str = name
         self.fig: Optional[Figure] = None
 
         self.source: ColumnDataSource = source
 
     @classmethod
-    def build_plot(cls, plot_type: PlotType, name: str, source: ColumnDataSource):
+    def build_plot(cls, plot_type: PlotType, name: str, source: ColumnDataSource) -> "TrackerPlot":
+        """
+        :param plot_type: type of plot to be created
+        :param name: name of plot to be created
+        :param source: a columnar data source from which this plot receives updates
+        :return: an initialized tracker plot
+        """
         if plot_type == PlotType.train_val_loss:
             return TrainValLossPlot(name, source)
 
@@ -46,6 +58,10 @@ class TrainValLossPlot(TrackerPlot):
 
 
 class Server:
+    """
+    A server is responsible for communicating with the client about plot creation and
+    updating. It is also responsible for managing a separate plot server.
+    """
     _source_formats: Dict[PlotType, Dict] = {
         PlotType.train_val_loss: {"train": [], "val": [], "epoch": []},
         PlotType.random: {'x': [], 'y': []},
@@ -66,6 +82,13 @@ class Server:
         self._queues: Dict[str, Queue] = {}
 
     def run(self, host: str, port: int = PORT, plots_port: int = PS_PORT) -> None:
+        """
+        Run the server.
+
+        :param host: host on which to run
+        :param port: port on which to run the server
+        :param plots_port: port on which to serve plots
+        """
         self._host = host
         self._port = port
         self._plot_server_port = plots_port
