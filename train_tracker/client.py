@@ -102,6 +102,7 @@ class Tracker(ABC):
         if self._client:
             raise ValueError(f"Cannot add new client, client already exists: {self._client}")
         self._client = client
+        self._add_to_server()
 
     @abstractmethod
     def update(self, *args) -> None:
@@ -113,26 +114,27 @@ class TrainValLossTracker(Tracker):
         super(TrainValLossTracker, self).__init__(name=name, client=client, plot_type=PlotType.train_val_loss)
         self._train: List[float] = []
         self._val: List[float] = []
-        self._epochs: List[int] = []
+        self._steps: List[int] = []
 
         self._add_to_server()
 
-    @property
-    def train_losses(self) -> NDArray:
-        return np.array(self._train)
+    def get_train_losses(self, as_np=False) -> Union[List, NDArray]:
+        if as_np:
+            return np.array(self._train)
 
-    @property
-    def val_losses(self) -> NDArray:
-        return np.array(self._val)
+    def get_val_losses(self, as_np=False) -> Union[List, NDArray]:
+        if as_np:
+            return np.array(self._val)
 
-    @property
-    def epochs(self) -> NDArray:
-        return np.array(self._epochs)
+    def get_steps(self, as_np=False) -> Union[List, NDArray]:
+        if as_np:
+            return np.array(self._steps)
 
-    def update(self, train: float, val: float, epoch: int) -> None:
+    def update(self, train: float, val: float, step: int) -> None:
         self._train.append(train)
         self._val.append(val)
-        self._epochs.append(epoch)
-        new_data: NDArray = np.array([train, val, epoch], dtype=np.float32)
+        self._steps.append(step)
+        new_data: NDArray = np.array([train, val, step], dtype=np.float32)
         if self._client:
             self._client.update_plot(self._name, new_data)
+

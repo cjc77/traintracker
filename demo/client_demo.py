@@ -27,8 +27,8 @@ def main():
         lt1.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
         lt2.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
         time.sleep(1)
-        # print("lt1:", lt1.epochs, lt1.train_losses, lt1.val_losses, sep='\n')
-        # print("lt2:", lt2.epochs, lt2.train_losses, lt2.val_losses, sep='\n')
+        print("lt1:", lt1.get_steps(True), lt1.get_train_losses(True), lt1.get_val_losses(True), sep='\n')
+        print("lt2:", lt2.get_steps(True), lt2.get_train_losses(True), lt2.get_val_losses(True), sep='\n')
 
     pc.shutdown_server()
     pc.close_connection()
