@@ -5,3 +5,6 @@
 .idea
 
 # Jupyter
+
+# Docs
+docs/build/
