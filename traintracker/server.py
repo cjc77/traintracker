@@ -9,7 +9,7 @@ from bokeh.document.document import Document
 from bokeh.plotting.figure import Figure
 from copy import deepcopy
 
-from train_tracker.util.defs import *
+from traintracker.util.defs import *
 
 
 class TrackerPlot(ABC):

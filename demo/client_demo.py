@@ -1,6 +1,6 @@
-from train_tracker.client import Client, TrainValLossTracker
-from train_tracker.server import PORT
-from train_tracker.util.defs import *
+from traintracker.client import Client, TrainValLossTracker
+from traintracker.server import PORT
+from traintracker.util.defs import *
 import time
 
 

@@ -4,7 +4,7 @@ API
 Server
 ------
 
-.. currentmodule:: train_tracker.server
+.. currentmodule:: traintracker.server
 
 .. autosummary::
    Server
@@ -20,7 +20,7 @@ Server
 Client
 ------
 
-.. currentmodule:: train_tracker.client
+.. currentmodule:: traintracker.client
 
 .. autosummary::
    Client

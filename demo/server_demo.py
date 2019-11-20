@@ -1,4 +1,4 @@
-from train_tracker.server import Server, PORT, PS_PORT
+from traintracker.server import Server, PORT, PS_PORT
 
 
 def main():
