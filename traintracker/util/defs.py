@@ -10,6 +10,8 @@ TIMEOUT = 100
 BUFFSIZE = 1024
 BYTEORDER = "little"
 INT32 = 4
+GENERIC_ACK = 1
+
 
 NP_ORDER: Dict[str, str] = {
     "little": 'L',
