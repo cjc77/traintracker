@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'traintracker'
-copyright = '2019, Jacob Collins, Carson Cook'
-author = 'Jacob Collins, Carson Cook'
+copyright = '2019, Carson Cook'
+author = 'Carson Cook'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'

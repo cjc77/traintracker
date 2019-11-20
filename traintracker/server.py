@@ -8,7 +8,7 @@ from bokeh.plotting import figure, ColumnDataSource, gridplot
 from bokeh.document.document import Document
 from bokeh.plotting.figure import Figure
 
-from train_tracker.util.defs import *
+from traintracker.util.defs import *
 
 
 class TrackerPlot(ABC):

@@ -2,7 +2,7 @@ import socket
 import numpy as np
 from abc import ABC, abstractmethod
 
-from train_tracker.util.defs import *
+from traintracker.util.defs import *
 
 FAIL_MSG = "Correct data not received by server, received: {}, expected: {}"
 FAIL_SPEC = "Point of failure: {}"
