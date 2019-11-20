@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
 
-from train_tracker.client import TrainValLossTracker
+from traintracker.client import TrainValLossTracker
 
 
 class TestTrainValLossTracker(TestCase):

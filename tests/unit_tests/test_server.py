@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from train_tracker.server import Server
-from train_tracker.util.defs import *
+from traintracker.server import Server
+from traintracker.util.defs import *
 
 
 class TestServer(TestCase):
