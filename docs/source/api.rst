@@ -35,3 +35,37 @@ Client
    :members:
    :private-members:
    :inherited-members:
+
+Trackers
+--------
+
+.. py:currentmodule:: traintracker.trackers
+
+.. autosummary::
+   Tracker.update
+   Tracker.get_all_tracked
+
+.. autoclass:: Tracker
+   :members:
+   :private-members:
+   :inherited-members:
+
+
+TrainValLossTracker
+^^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+   TrainValLossTracker
+
+.. autosummary::
+   TrainValLossTracker.get_train_losses
+   TrainValLossTracker.get_val_losses
+   TrainValLossTracker.get_steps
+   TrainValLossTracker.get_all_tracked
+   TrainValLossTracker.update
+
+.. autoclass:: TrainValLossTracker
+   :members:
+   :private-members:
+   :inherited-members:
+
