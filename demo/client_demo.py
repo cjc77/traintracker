@@ -11,11 +11,14 @@ def main():
 
     # If may want to run without server
     # init trackers
-    lt1 = TrainValLossTracker("model1_tv_loss")
-    lt2 = TrainValLossTracker("model2_tv_loss")
+    # lt1 = TrainValLossTracker("model1_tv_loss")
+    # lt2 = TrainValLossTracker("model2_tv_loss")
+    l_ts = [TrainValLossTracker(f"model{i}_loss") for i in range(10)]
     # then connect
-    lt1.connect_client(pc)
-    lt2.connect_client(pc)
+    # lt1.connect_client(pc)
+    # lt2.connect_client(pc)
+    for lt in l_ts:
+        lt.connect_client(pc)
 
     # # OR if want to run with server for sure
     # # init trackers w/ client
@@ -24,10 +27,12 @@ def main():
 
     pc.start_plot_server()
 
-    for i in range(10):
-        lt1.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
-        lt2.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
-        time.sleep(1)
+    for i in range(100):
+        # lt1.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
+        # lt2.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
+        for lt in l_ts:
+            lt.update(10 - i * np.random.normal(), 10 - i * np.random.normal(), i)
+        time.sleep(.2)
         # print("lt1:", lt1.get_steps(True), lt1.get_train_losses(True), lt1.get_val_losses(True), sep='\n')
         # print("lt2:", lt2.get_steps(True), lt2.get_train_losses(True), lt2.get_val_losses(True), sep='\n')
 

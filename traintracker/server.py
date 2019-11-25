@@ -1,13 +1,13 @@
 import asyncio
 from asyncio import StreamReader, StreamWriter
 from queue import Queue
-import numpy as np
 from abc import ABC, abstractmethod
 from bokeh.server.server import Server as BokehServer
 from bokeh.plotting import figure, ColumnDataSource, gridplot
 from bokeh.document.document import Document
 from bokeh.plotting.figure import Figure
 from copy import deepcopy
+from dask import delayed, compute
 
 from traintracker.util.defs import *
 
@@ -40,6 +40,10 @@ class TrackerPlot(ABC):
     def update(self, new_data, doc: Document) -> None:
         pass
 
+    @abstractmethod
+    def update_from_queue(self, new_data_queue: Queue, doc: Document) -> None:
+        pass
+
 
 class TrainValLossPlot(TrackerPlot):
     def __init__(self, name: str, source: ColumnDataSource):
@@ -48,7 +52,18 @@ class TrainValLossPlot(TrackerPlot):
 
     def update(self, new_data, doc: Document) -> None:
         new = {"train": [new_data[0]], "val": [new_data[1]], "epoch": [new_data[2]]}
+        # add_next_tick_callback() can be used safely without taking the document lock
         doc.add_next_tick_callback(lambda: self.source.stream(new))
+
+    def update_from_queue(self, new_data_queue: Queue, doc: Document) -> None:
+        while not new_data_queue.empty():
+            new_data = new_data_queue.get_nowait()
+            # add_next_tick_callback() can be used safely without taking the document lock
+            doc.add_next_tick_callback(
+                lambda: self.source.stream({"train": [new_data[0]],
+                                            "val": [new_data[1]],
+                                            "epoch": [new_data[2]]})
+            )
 
     def _init_figure(self) -> None:
         self.fig = figure(title=self._name)
@@ -175,8 +190,8 @@ class Server:
             self._queues[plot_name] = Queue()
 
     def _update_plots(self, doc: Document) -> None:
-        for name, plot in self._plots.items():
-            q = self._queues[name]
-            while not q.empty():
-                plot.update(q.get(), doc)
+        # update each plot/queue pair in parallel
+        compute(
+            delayed(plot.update_from_queue)(self._queues[name], doc) for name, plot, in self._plots.items()
+        )
 
