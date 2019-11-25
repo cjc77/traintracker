@@ -37,7 +37,7 @@ class TrackerPlot(ABC):
             return TrainValLossPlot(name, source)
 
     @abstractmethod
-    def update(self, new_data) -> None:
+    def update(self, new_data, doc: Document) -> None:
         pass
 
 
@@ -46,9 +46,9 @@ class TrainValLossPlot(TrackerPlot):
         super(TrainValLossPlot, self).__init__(name=name, source=source)
         self._init_figure()
 
-    def update(self, new_data) -> None:
+    def update(self, new_data, doc: Document) -> None:
         new = {"train": [new_data[0]], "val": [new_data[1]], "epoch": [new_data[2]]}
-        self.source.stream(new)
+        doc.add_next_tick_callback(lambda: self.source.stream(new))
 
     def _init_figure(self) -> None:
         self.fig = figure(title=self._name)
@@ -78,7 +78,6 @@ class Server:
         self._writer: Optional[StreamWriter] = None
         self._plot_server: Optional[BokehServer] = None
 
-        self._sources: Dict[str, ColumnDataSource] = {}
         self._plots: Dict[str, TrackerPlot] = {}
         self._queues: Dict[str, Queue] = {}
 
@@ -127,12 +126,9 @@ class Server:
         self._reader = reader
 
         while True:
-            cmd = await self._reader.read(BUFFSIZE)
+            cmd = await self._reader.read(INT32)
             cmd = int.from_bytes(cmd, BYTEORDER)
             print(f"Received command: {Cmd(cmd).name}")
-
-            # Send Ack
-            await self._write_and_drain(cmd.to_bytes(INT32, BYTEORDER))
 
             # If command is server_shutdown, this is a special case
             if cmd == Cmd.server_shutdown:
@@ -146,29 +142,26 @@ class Server:
 
     async def _handle_cmd(self, cmd: Cmd) -> None:
         if cmd == Cmd.update_plot:
-            plot_name: bytes = await self._reader.read(BUFFSIZE)
+            plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
+            plot_name: bytes = await self._reader.read(plot_name_size)
             plot_name: str = plot_name.decode()
             print(f"Updating: {plot_name}")
-            await self._write_and_drain(plot_name.encode())
             await self._handle_plot_update(plot_name)
         elif cmd == Cmd.add_plot:
-            plot_type = await self._reader.read(BUFFSIZE)
+            plot_type = await self._reader.read(INT32)
             plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
-            print(f"Plots: {self._plots}")
-            await self._write_and_drain(plot_type.to_bytes(INT32, BYTEORDER))
-            plot_name: bytes = await self._reader.read(BUFFSIZE)
+            plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
+            plot_name: bytes = await self._reader.read(plot_name_size)
             plot_name: str = plot_name.decode()
             print(f"Adding: {plot_name}")
-            await self._write_and_drain(plot_name.encode())
             self._add_plot(plot_type, plot_name)
-            print(f"Plots: {self._plots}")
         elif cmd == Cmd.start_plot_server:
             self._start_plot_server()
 
     async def _handle_plot_update(self, plot_name: str) -> None:
-        new_data: NDArray = np.frombuffer(await self._reader.read(BUFFSIZE), dtype=np.float32)
-        print(f"Received data: {new_data}")
-        await self._write_and_drain(len(new_data).to_bytes(INT32, BYTEORDER))
+        new_data_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
+        new_data: NDArray = np.frombuffer(await self._reader.read(new_data_size),
+                                          dtype=np.float32)
         self._queues[plot_name].put(new_data)
 
     async def _write_and_drain(self, data: bytes) -> None:
@@ -185,4 +178,5 @@ class Server:
         for name, plot in self._plots.items():
             q = self._queues[name]
             while not q.empty():
-                plot.update(q.get())
+                plot.update(q.get(), doc)
+

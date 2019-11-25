@@ -40,20 +40,22 @@ class Client:
     def add_plot(self, plot_type: PlotType, plot_name: str) -> None:
         self._send_cmd(Cmd.add_plot)
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
-        self._safe_send(data, assertion=True, expected=plot_type.value, fail_msg=FAIL_MSG)
+        self._safe_send(data)
         data = plot_name.encode()
-        self._safe_send(data, assertion=True, expected=plot_name, fail_msg=FAIL_MSG)
+        self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
+        self._safe_send(data)
 
     def update_plot(self, plot_name: str, new_data: NDArray) -> None:
         self._send_cmd(Cmd.update_plot)
         data = plot_name.encode()
-        self._safe_send(data, assertion=True, expected=plot_name, fail_msg=FAIL_MSG)
+        self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
+        self._safe_send(data)
 
         if new_data.dtype != np.float32:
             new_data: np.array = np.array(new_data, dtype=np.float32)
         data = new_data.tobytes()
-        print(f"Sending data: {new_data}")
-        self._safe_send(data, assertion=True, expected=len(new_data), fail_msg=FAIL_MSG)
+        self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
+        self._safe_send(data)
 
     def start_plot_server(self) -> None:
         """
@@ -69,16 +71,8 @@ class Client:
 
     def _send_cmd(self, cmd: Cmd) -> None:
         data: bytes = cmd.to_bytes(INT32, BYTEORDER)
-        self._safe_send(data, assertion=True, expected=cmd.value, fail_msg=FAIL_MSG)
+        self._safe_send(data)
 
-    def _safe_send(self, data: bytes, assertion=False, expected: Union[int, str] = 0,
-                   fail_msg="", fail_spec="", buffsize=BUFFSIZE) -> None:
+    def _safe_send(self, data: bytes) -> None:
         if self._socket:
             self._socket.sendall(data)
-            ack = self._socket.recv(buffsize)
-            if type(expected) == int:
-                ack = int.from_bytes(ack, BYTEORDER)
-            elif type(expected) == str:
-                ack = ack.decode()
-            if assertion:
-                assert ack == expected, fail_msg.format(ack, expected) + fail_spec
