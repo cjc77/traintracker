@@ -4,7 +4,13 @@
 # PyCharm
 .idea
 
+# VSCode
+.vscode
+
 # Jupyter
 
 # Docs
 docs/build/
+
+# setup.py (local installation) metadata 
+*.egg-info
