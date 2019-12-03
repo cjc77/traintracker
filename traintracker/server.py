@@ -16,12 +16,6 @@ class Server:
     A server is responsible for communicating with the client about plot creation and
     updating. It is also responsible for managing a separate plot server.
     """
-    _source_formats: Dict[PlotType, Dict] = {
-        PlotType.train_val_loss: {"train": [], "val": [], "epoch": []},
-        PlotType.random: {'x': [], 'y': []},
-        PlotType.test_line_plt: {'x': [], 'y': []}
-    }
-
     def __init__(self):
         self._host: Optional[str] = None
         self._port: Optional[int] = None
@@ -123,8 +117,7 @@ class Server:
 
     def _add_plot(self, plot_type: PlotType, plot_name: str) -> None:
         if plot_name not in self._plots:
-            src = ColumnDataSource(deepcopy(self._source_formats[plot_type]))
-            self._plots[plot_name] = TrackerPlot.build_plot(plot_type, plot_name, src)
+            self._plots[plot_name] = TrackerPlot.build_plot(plot_type, plot_name)
             self._queues[plot_name] = Queue()
 
     def _update_plots(self, doc: Document) -> None:

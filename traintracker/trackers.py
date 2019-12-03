@@ -144,6 +144,8 @@ class AccuracyTracker(Tracker):
         super(AccuracyTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
         self._accuracy: List[float] = []
         self._steps: List[int] = []
+
+        self._add_to_server()
     
     def get_accuracies(self, as_np=False) -> Union[List, NDArray]:
         """
