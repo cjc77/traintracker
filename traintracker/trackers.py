@@ -82,6 +82,7 @@ class TrainValLossTracker(Tracker):
         """
         if as_np:
             return np.array(self._train)
+        return self._train
 
     def get_val_losses(self, as_np=False) -> Union[List, NDArray]:
         """
@@ -92,6 +93,7 @@ class TrainValLossTracker(Tracker):
         """
         if as_np:
             return np.array(self._val)
+        return self._val
 
     def get_steps(self, as_np=False) -> Union[List, NDArray]:
         """
@@ -103,6 +105,7 @@ class TrainValLossTracker(Tracker):
         """
         if as_np:
             return np.array(self._steps)
+        return self._steps
 
     def get_all_tracked(self, as_np=False) -> Tuple[Union[List, NDArray], Union[List, NDArray], Union[List, NDArray]]:
         """
@@ -126,17 +129,68 @@ class TrainValLossTracker(Tracker):
         self._train.append(train_loss)
         self._val.append(val_loss)
         self._steps.append(step)
-        new_data: NDArray = np.array([train_loss, val_loss, step], dtype=np.float32)
+
         if self._client:
+            new_data: NDArray = np.array([train_loss, val_loss, step], dtype=np.float32)
             self._client.update_plot(self._name, new_data)
+
 
 class AccuracyTracker(Tracker):
     def __init__(self, name: str, client: Optional[Client] = None):
+        """
+        :param name: the name of this tracker, e.g. "model 1 loss"
+        :param client: the client that the tracker is connected to
+        """
         super(AccuracyTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
         self._accuracy: List[float] = []
+        self._steps: List[int] = []
     
-    def update(self, predicted: NDArray, labels: NDArray) -> None:
-        n: int = len(labels)
-        self._accuracy.append(np.sum(predicted == labels) / n)
+    def get_accuracies(self, as_np=False) -> Union[List, NDArray]:
+        """
+        Retrieve the collected accuracies.
 
-        # TODO: handle handing off updates to client (if client is present)
+        :param as_np: whether to return values as `numpy` arrays
+        :return: a list or array of collected accuracies
+        """
+        if as_np:
+            return np.array(self._accuracy)
+        return self._accuracy
+
+    def get_steps(self, as_np=False) -> Union[List, NDArray]:
+        """
+        Retrieve the collected step numbers.
+
+        :param as_np: whether to return values as `numpy` arrays
+        :return: a list or array of steps
+            (we do not assume a regular sequence, so this is necessary)
+        """
+        if as_np:
+            return np.array(self._steps)
+        return self._steps
+
+    def get_all_tracked(self, as_np=False) -> Tuple[Union[List, NDArray], Union[List, NDArray]]:
+        """
+        Retrieve all collected metrics.
+
+        :param as_np: whether to return values as `numpy` arrays
+        :return: a 2-tuple of all collected metrics
+        """
+        if as_np:
+            return np.array(self._accuracy), np.array(self._steps)
+        return self._accuracy, self._steps
+
+    def update(self, predicted: NDArray, labels: NDArray, step: int) -> None:
+        """
+        Update the tracker's metrics.
+
+        :param predicted: predictions (categorical)
+        :param labels: ground truth labels (categorical)
+        :param step: step for which metrics are being gathered
+        """
+        n: int = len(labels)
+        acc = np.sum(predicted == labels) / n
+        self._accuracy.append(acc)
+
+        if self._client:
+            new_data: NDArray = np.array([acc, step], dtype=np.float32)
+            self._client.update_plot(self._name, new_data)
