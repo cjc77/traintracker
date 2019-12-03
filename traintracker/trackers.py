@@ -129,3 +129,14 @@ class TrainValLossTracker(Tracker):
         new_data: NDArray = np.array([train_loss, val_loss, step], dtype=np.float32)
         if self._client:
             self._client.update_plot(self._name, new_data)
+
+class AccuracyTracker(Tracker):
+    def __init__(self, name: str, client: Optional[Client] = None):
+        super(AccuracyTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
+        self._accuracy: List[float] = []
+    
+    def update(self, predicted: NDArray, labels: NDArray) -> None:
+        n: int = len(labels)
+        self._accuracy.append(np.sum(predicted == labels) / n)
+
+        # TODO: handle handing off updates to client (if client is present)
