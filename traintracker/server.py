@@ -75,7 +75,7 @@ class Server:
         while True:
             cmd = await self._reader.read(INT32)
             cmd = int.from_bytes(cmd, BYTEORDER)
-            print(f"Received command: {Cmd(cmd).name}")
+            # print(f"Received command: {Cmd(cmd).name}")
 
             # If command is server_shutdown, this is a special case
             if cmd == Cmd.server_shutdown:
@@ -92,7 +92,7 @@ class Server:
             plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
             plot_name: bytes = await self._reader.read(plot_name_size)
             plot_name: str = plot_name.decode()
-            print(f"Updating: {plot_name}")
+            # print(f"Updating: {plot_name}")
             await self._handle_plot_update(plot_name)
         elif cmd == Cmd.add_plot:
             plot_type = await self._reader.read(INT32)
@@ -100,7 +100,7 @@ class Server:
             plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
             plot_name: bytes = await self._reader.read(plot_name_size)
             plot_name: str = plot_name.decode()
-            print(f"Adding: {plot_name}")
+            # print(f"Adding: {plot_name}")
             self._add_plot(plot_type, plot_name)
         elif cmd == Cmd.start_plot_server:
             self._start_plot_server()

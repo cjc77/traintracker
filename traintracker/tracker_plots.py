@@ -7,13 +7,13 @@ from copy import deepcopy
 
 from traintracker.util.defs import *
 
+
 SOURCE_FORMATS: Dict[PlotType, Dict] = {
     PlotType.train_val_loss: {"train": [], "val": [], "step": []},
     PlotType.accuracy: {"acc": [], "step": []},
     PlotType.random: {'x': [], 'y': []},
     PlotType.test_line_plt: {'x': [], 'y': []}
 }
-
 
 
 class TrackerPlot(ABC):
@@ -93,10 +93,10 @@ class AccuraccyPlot(TrackerPlot):
     def update_from_queue(self, new_data_queue: Queue, doc: Document) -> None:
         while not new_data_queue.empty():
             new_data = new_data_queue.get_nowait()
-        # add_next_tick_callback() can be used safely without taking the document lock
-        doc.add_next_tick_callback(
-            lambda: self.source.stream({"acc": [new_data[0]], "step": [new_data[1]]})
-        )
+            # add_next_tick_callback() can be used safely without taking the document lock
+            doc.add_next_tick_callback(
+                lambda: self.source.stream({"acc": [new_data[0]], "step": [new_data[1]]})
+            )
 
     def _init_figure(self) -> None:
         self.fig = figure(title=self._name)

@@ -1,8 +1,9 @@
+import time
+
 from traintracker.client import Client
 from traintracker.trackers import TrainValLossTracker, AccuracyTracker
 from traintracker.server import PORT
 from traintracker.util.defs import *
-import time
 
 
 def main():
