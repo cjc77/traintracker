@@ -18,9 +18,7 @@ def main():
     lt1.connect_client(pc)
     at1.connect_client(pc)
 
-    # # OR if want to run with server for sure
-    # # init trackers w/ client
-    # lt1 = TrainValLossTracker("model1_tv_loss", pc)
+    print(lt1.id, at1.id)
 
     pc.start_plot_server()
 
