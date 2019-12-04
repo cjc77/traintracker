@@ -17,33 +17,43 @@ SOURCE_FORMATS: Dict[PlotType, Dict] = {
 
 
 class TrackerPlot(ABC):
-    def __init__(self, name: str, source: ColumnDataSource):
-        """ A plot that corresponds with a tracker
+    """
+    A plot that corresponds to a tracker on the client side.
+    """
+    def __init__(self, name: str, id_: int, source: ColumnDataSource):
+        """ A plot that corresponds with a tracker.
         
         Args:
             name (str): name of this plot
+            id_ (int): a unique id that identifies both this plot and the tracker
+                that is related to it.
             source (ColumnDataSource): a columnar data source from which this plot 
                 receives updates
         """
         self._name: str = name
+        self._id: int = id_
         self.fig: Optional[Figure] = None
 
         self.source: ColumnDataSource = source
 
     @classmethod
-    def build_plot(cls, plot_type: PlotType, name: str) -> "TrackerPlot":
+    def build_plot(cls, plot_type: PlotType, name: str, id_: int) -> "TrackerPlot":
         """
         Args:
             plot_type (PlotType): type of plot to be created
             name (str): name of plot to be created
-            source (ColumnDataSource): a columnar data source from which this
-                plot receives updates
+            id_ (int): a unique id that identifies both this plot and the tracker
+                that is related to it.
         """
         source = ColumnDataSource(deepcopy(SOURCE_FORMATS[plot_type]))
         if plot_type == PlotType.train_val_loss:
-            return TrainValLossPlot(name, source)
+            return TrainValLossPlot(name, id_, source)
         elif plot_type == PlotType.accuracy:
-            return AccuraccyPlot(name, source)
+            return AccuraccyPlot(name, id_, source)
+
+    @property
+    def id(self) -> int:
+        return self._id
 
     @abstractmethod
     def update(self, new_data, doc: Document) -> None:
@@ -55,8 +65,8 @@ class TrackerPlot(ABC):
 
 
 class TrainValLossPlot(TrackerPlot):
-    def __init__(self, name: str, source: ColumnDataSource):
-        super(TrainValLossPlot, self).__init__(name=name, source=source)
+    def __init__(self, name: str, id_: int, source: ColumnDataSource):
+        super(TrainValLossPlot, self).__init__(name=name, id_=id_, source=source)
         self._init_figure()
 
     def update(self, new_data, doc: Document) -> None:
@@ -83,8 +93,8 @@ class TrainValLossPlot(TrackerPlot):
 
 
 class AccuraccyPlot(TrackerPlot):
-    def __init__(self, name: str, source: ColumnDataSource):
-        super(AccuraccyPlot, self).__init__(name=name, source=source)
+    def __init__(self, name: str, id_: int, source: ColumnDataSource):
+        super(AccuraccyPlot, self).__init__(name=name, id_=id_, source=source)
         self._init_figure()
 
     def update(self, new_data, doc: Document) -> None:

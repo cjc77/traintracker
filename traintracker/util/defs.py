@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Sequence, Optional, Union
+from typing import Dict, Tuple, List, Sequence, Optional, Union, Generator
 from enum import IntEnum
 import numpy as np
 

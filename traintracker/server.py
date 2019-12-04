@@ -26,8 +26,8 @@ class Server:
         self._writer: Optional[StreamWriter] = None
         self._plot_server: Optional[BokehServer] = None
 
-        self._plots: Dict[str, TrackerPlot] = {}
-        self._queues: Dict[str, Queue] = {}
+        self._plots: Dict[int, TrackerPlot] = {}
+        self._queues: Dict[int, Queue] = {}
 
     def run(self, host: str, port: int = PORT, plots_port: int = PS_PORT) -> None:
         """ Run the server.
@@ -91,35 +91,35 @@ class Server:
     async def _handle_cmd(self, cmd: Cmd) -> None:
         if cmd == Cmd.update_plot:
             plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
-            plot_name: bytes = await self._reader.read(plot_name_size)
-            plot_name: str = plot_name.decode()
-            # print(f"Updating: {plot_name}")
-            await self._handle_plot_update(plot_name)
+            plot_id = await self._reader.read(INT32)
+            plot_id = int.from_bytes(plot_id, BYTEORDER)
+            await self._handle_plot_update(plot_id)
         elif cmd == Cmd.add_plot:
             plot_type = await self._reader.read(INT32)
             plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
+            plot_id = await self._reader.read(INT32)
+            plot_id = int.from_bytes(plot_id, BYTEORDER)
             plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
             plot_name: bytes = await self._reader.read(plot_name_size)
             plot_name: str = plot_name.decode()
-            # print(f"Adding: {plot_name}")
-            self._add_plot(plot_type, plot_name)
+            self._add_plot(plot_type, plot_name, plot_id)
         elif cmd == Cmd.start_plot_server:
             self._start_plot_server()
 
-    async def _handle_plot_update(self, plot_name: str) -> None:
+    async def _handle_plot_update(self, plot_id: int) -> None:
         new_data_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
         new_data: NDArray = np.frombuffer(await self._reader.read(new_data_size),
                                           dtype=np.float32)
-        self._queues[plot_name].put(new_data)
+        self._queues[plot_id].put(new_data)
 
     async def _write_and_drain(self, data: bytes) -> None:
         self._writer.write(data)
         await self._writer.drain()
 
-    def _add_plot(self, plot_type: PlotType, plot_name: str) -> None:
-        if plot_name not in self._plots:
-            self._plots[plot_name] = TrackerPlot.build_plot(plot_type, plot_name)
-            self._queues[plot_name] = Queue()
+    def _add_plot(self, plot_type: PlotType, plot_name: str, plot_id: int) -> None:
+        if plot_id not in self._plots:
+            self._plots[plot_id] = TrackerPlot.build_plot(plot_type, plot_name, plot_id)
+            self._queues[plot_id] = Queue()
 
     def _update_plots(self, doc: Document) -> None:
         # update each plot/queue pair in parallel

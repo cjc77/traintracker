@@ -1,7 +1,23 @@
 from abc import ABC, abstractmethod
+import random
 
 from traintracker.util.defs import *
 from traintracker.client import Client
+
+
+def unique_id() -> int:
+    """ Generate a continuous stream of unique IDs.
+
+    First ID is random, next IDs are incremented from initial seed.
+    
+    Returns:
+        int: a unique id, based on a randomly seeded initial ID.
+    """
+    seed_id = random.getrandbits(32)
+
+    while True:
+        yield seed_id
+        seed_id += 1
 
 
 class Tracker(ABC):
@@ -10,6 +26,7 @@ class Tracker(ABC):
     Trackers are utilities that track various metrics
     regarding the performance of a model.
     """
+    id_generator: Generator = unique_id()
     def __init__(self, plot_type: PlotType, name: str, client: Optional[Client] = None):
         """
         Args:
@@ -21,10 +38,15 @@ class Tracker(ABC):
         self._plot_type: PlotType = plot_type
         self._client: Optional[Client] = client
         self._name: str = name
+        self._id: int = next(self.id_generator)
 
     @property
     def plot_type(self) -> PlotType:
         return self._plot_type
+
+    @property
+    def id(self) -> int:
+        return self._id
 
     def connect_client(self, client: Client) -> None:
         """ Connect this tracker to a client.
@@ -39,7 +61,7 @@ class Tracker(ABC):
 
     def _add_to_server(self) -> None:
         if self._client:
-            self._client.add_plot(self._plot_type, self._name)
+            self._client.add_plot(self._plot_type, self._name, self._id)
 
     @abstractmethod
     def update(self, *args) -> None:
@@ -145,7 +167,7 @@ class TrainValLossTracker(Tracker):
 
         if self._client:
             new_data: NDArray = np.array([train_loss, val_loss, step], dtype=np.float32)
-            self._client.update_plot(self._name, new_data)
+            self._client.update_plot(self._id, new_data)
 
 
 class AccuracyTracker(Tracker):
@@ -217,4 +239,4 @@ class AccuracyTracker(Tracker):
 
         if self._client:
             new_data: NDArray = np.array([acc, step], dtype=np.float32)
-            self._client.update_plot(self._name, new_data)
+            self._client.update_plot(self._id, new_data)

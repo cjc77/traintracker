@@ -38,17 +38,20 @@ class Client:
         self._socket.close()
         self._socket = None
 
-    def add_plot(self, plot_type: PlotType, plot_name: str) -> None:
+    def add_plot(self, plot_type: PlotType, plot_name: str, tracker_id: int) -> None:
         self._send_cmd(Cmd.add_plot)
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
+        self._safe_send(data)
+        data: bytes = tracker_id.to_bytes(INT32, BYTEORDER)
         self._safe_send(data)
         data = plot_name.encode()
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)
 
-    def update_plot(self, plot_name: str, new_data: NDArray) -> None:
+    def update_plot(self, plot_id: int, new_data: NDArray) -> None:
         self._send_cmd(Cmd.update_plot)
-        data = plot_name.encode()
+        # data = plot_name.encode()
+        data: bytes = plot_id.to_bytes(INT32, BYTEORDER)
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)
 
