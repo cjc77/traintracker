@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from traintracker.server import Server
+from traintracker.tracker_plots import SOURCE_FORMATS
 from traintracker.util.defs import *
 
 
@@ -10,7 +11,7 @@ class TestServer(TestCase):
         s = Server()
         s._add_plot(PlotType.train_val_loss, name)
         p = s._plots[name]
-        src = s._source_formats[PlotType.train_val_loss]
+        src = SOURCE_FORMATS[PlotType.train_val_loss]
         self.assertTrue(p.source.data.keys() == src.keys(),
                         "Column source for new plot should have same keys as template.")
         self.assertTrue(all([not ls for ls in p.source.data.values()]),
