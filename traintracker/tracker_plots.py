@@ -18,11 +18,12 @@ SOURCE_FORMATS: Dict[PlotType, Dict] = {
 
 class TrackerPlot(ABC):
     def __init__(self, name: str, source: ColumnDataSource):
-        """
-        A plot that corresponds with a tracker.
-
-        :param name: name of this plot
-        :param source: a columnar data source from which this plot receives updates
+        """ A plot that corresponds with a tracker
+        
+        Args:
+            name (str): name of this plot
+            source (ColumnDataSource): a columnar data source from which this plot 
+                receives updates
         """
         self._name: str = name
         self.fig: Optional[Figure] = None
@@ -32,10 +33,11 @@ class TrackerPlot(ABC):
     @classmethod
     def build_plot(cls, plot_type: PlotType, name: str) -> "TrackerPlot":
         """
-        :param plot_type: type of plot to be created
-        :param name: name of plot to be created
-        :param source: a columnar data source from which this plot receives updates
-        :return: an initialized tracker plot
+        Args:
+            plot_type (PlotType): type of plot to be created
+            name (str): name of plot to be created
+            source (ColumnDataSource): a columnar data source from which this
+                plot receives updates
         """
         source = ColumnDataSource(deepcopy(SOURCE_FORMATS[plot_type]))
         if plot_type == PlotType.train_val_loss:

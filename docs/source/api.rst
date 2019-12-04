@@ -69,3 +69,21 @@ TrainValLossTracker
    :private-members:
    :inherited-members:
 
+
+AccuracyTracker
+^^^^^^^^^^^^^^^
+
+.. autosummary::
+   AccuracyTracker
+
+.. autosummary::
+   AccuracyTracker.get_accuracies
+   AccuracyTracker.get_steps
+   AccuracyTracker.get_all_tracked
+   AccuracyTracker.update
+
+.. autoclass:: AccuracyTracker
+   :members:
+   :private-members:
+   :inherited-members:
+

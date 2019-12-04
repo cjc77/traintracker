@@ -11,6 +11,7 @@
 
 # Docs
 docs/build/
+docs/source/_build
 
 # setup.py (local installation) metadata 
 *.egg-info

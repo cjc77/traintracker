@@ -12,9 +12,10 @@ from traintracker.tracker_plots import TrackerPlot
 
 
 class Server:
-    """
-    A server is responsible for communicating with the client about plot creation and
-    updating. It is also responsible for managing a separate plot server.
+    """ A server is responsible for communicating with the client about plots.
+    
+    Communications involves commands regarding plot creation and updating.
+    It is also responsible for managing a separate plot server.
     """
     def __init__(self):
         self._host: Optional[str] = None
@@ -29,12 +30,12 @@ class Server:
         self._queues: Dict[str, Queue] = {}
 
     def run(self, host: str, port: int = PORT, plots_port: int = PS_PORT) -> None:
-        """
-        Run the server.
+        """ Run the server.
 
-        :param host: host on which to run
-        :param port: port on which to run the server
-        :param plots_port: port on which to serve plots
+        Args:
+            host (str): host on which to run
+            port (int): port on which to run the server
+            plots_port (int): port on which to serve plots
         """
         self._host = host
         self._port = port

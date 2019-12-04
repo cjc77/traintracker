@@ -9,9 +9,10 @@ FAIL_SPEC = "Point of failure: {}"
 
 
 class Client:
-    """
-    A client is responsible for passing along data to the server. A client will be
-    referenced by all trackers that wish to send data to the server.
+    """ A client is responsible for passing along data to the server. 
+
+    A client will be referenced by all trackers that wish to send data 
+    to the server.
     """
     def __init__(self):
         self._host: Optional[str] = None
@@ -19,11 +20,11 @@ class Client:
         self._socket: Optional[socket.socket] = None
 
     def connect(self, host: str, port: int) -> None:
-        """
-        Connect client to a server.
+        """ Connect client to a server.
 
-        :param host: host where server is running
-        :param port: port where server is listening
+        Args:
+            host (str): host where server is running
+            port (int): port where server is listening
         """
         self._host = host
         self._port = port
