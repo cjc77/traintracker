@@ -5,16 +5,18 @@ from traintracker.client import Client
 
 
 class Tracker(ABC):
-    """
-    Base class for all trackers. Trackers are utilities that track various metrics
+    """ Base class for all trackers. 
+
+    Trackers are utilities that track various metrics
     regarding the performance of a model.
     """
     def __init__(self, plot_type: PlotType, name: str, client: Optional[Client] = None):
         """
-        :param plot_type: type of plot that will be made by server if tracker is connected
-            to a client.
-        :param name: the name of this tracker, e.g. "model 1 loss"
-        :param client: the client that the tracker is connected to
+        Args:
+            plot_type (PlotType): type of plot that will be made by server if
+                tracker is connected to a client
+            name (str): the name of this tracker, e.g. "model 1 loss"
+            client (Client or None): the client that the tracker is connected to
         """
         self._plot_type: PlotType = plot_type
         self._client: Optional[Client] = client
@@ -25,10 +27,10 @@ class Tracker(ABC):
         return self._plot_type
 
     def connect_client(self, client: Client) -> None:
-        """
-        Connect this tracker to a client.
-
-        :param client: the client to which this tracker will send its data
+        """ Connect this tracker to a client.
+        
+        Args:
+            client (Client): the client to which this tracker will send its data
         """
         if self._client:
             raise ValueError(f"Cannot add new client, client already exists: {self._client}")
@@ -48,10 +50,13 @@ class Tracker(ABC):
 
     @abstractmethod
     def get_all_tracked(self, as_np=False):
-        """
-        Retrieve all collected metrics.
+        """ Retrieve all collected metrics.
 
-        :param as_np: whether to return values as `numpy` arrays
+        Args:
+            as_np (bool): whether to return values as `numpy` arrays
+
+        Returns:
+            Tuple: all tracked metrics (size varies by sub-class)
         """
         pass
 
@@ -63,8 +68,9 @@ class TrainValLossTracker(Tracker):
     """
     def __init__(self, name: str, client: Optional[Client] = None):
         """
-        :param name: the name of this tracker, e.g. "model 1 loss"
-        :param client: the client that the tracker is connected to
+        Args:
+            name (str): the name of this tracker, e.g. "model 1 loss"
+            client (Client or None): the client that the tracker is connected to
         """
         super(TrainValLossTracker, self).__init__(name=name, client=client, plot_type=PlotType.train_val_loss)
         self._train: List[float] = []
@@ -74,57 +80,64 @@ class TrainValLossTracker(Tracker):
         self._add_to_server()
 
     def get_train_losses(self, as_np=False) -> Union[List, NDArray]:
-        """
-        Retrieve the collected training set losses.
+        """ Retrieve the collected training set losses.
+        
+        Args:
+            as_np (bool): whether to return as a `numpy` array
 
-        :param as_np: whether to return as a `numpy` array
-        :return: a list or array of collected training losses
+        Returns:
+            List or Array: collected training losses
         """
         if as_np:
             return np.array(self._train)
         return self._train
 
     def get_val_losses(self, as_np=False) -> Union[List, NDArray]:
-        """
-        Retrieve the collected validation set losses.
+        """ Retrieve the collected validation set losses.
 
-        :param as_np: whether to return as a `numpy` array
-        :return: a list or array of collected validation losses
+        Args:
+            as_np (bool): whether to return as a `numpy` array
+        
+        Returns:
+            List or NDArray: collected validation losses
         """
         if as_np:
             return np.array(self._val)
         return self._val
 
     def get_steps(self, as_np=False) -> Union[List, NDArray]:
-        """
-        Retrieve the collected step numbers.
+        """ Retrieve the collected step numbers.
 
-        :param as_np: whether to return as a `numpy` array
-        :return: a list or array of steps
-            (we do not assume a regular sequence, so this is necessary)
+        Args:
+            as_np (bool): whether to return as a `numpy` array
+        
+        Returns:
+            List or NDArray: steps (we do not assume a regular sequence, so this is necessary)
         """
         if as_np:
             return np.array(self._steps)
         return self._steps
 
     def get_all_tracked(self, as_np=False) -> Tuple[Union[List, NDArray], Union[List, NDArray], Union[List, NDArray]]:
-        """
-        Retrieve all collected metrics.
+        """ Retrieve all collected metrics.
 
-        :param as_np: whether to return values as `numpy` arrays
-        :return: a 3-tuple of all collected metrics
+        Args:
+            as_np (bool): whether to return values as `numpy` arrays
+        
+        Returns:
+            Tuple: a 3-tuple of all collected metrics
         """
         if as_np:
             return np.array(self._train), np.array(self._val), np.array(self._steps)
         return self._train, self._val, self._steps
 
     def update(self, train_loss: float, val_loss: float, step: int) -> None:
-        """
-        Update the tracker's metrics.
+        """ Update the tracker's metrics.
 
-        :param train_loss: train set loss
-        :param val_loss: validation set loss
-        :param step: step for which metrics are being gathered
+        Args:
+            train_loss (float): train set loss
+            val_loss (float): validation set loss
+            step (int): step for which metrics are being gathered
         """
         self._train.append(train_loss)
         self._val.append(val_loss)
@@ -136,10 +149,14 @@ class TrainValLossTracker(Tracker):
 
 
 class AccuracyTracker(Tracker):
+    """
+    A tracker object that keeps a record of a model's accuracies for *categorical* data.
+    """
     def __init__(self, name: str, client: Optional[Client] = None):
         """
-        :param name: the name of this tracker, e.g. "model 1 loss"
-        :param client: the client that the tracker is connected to
+        Args: 
+            name (str): the name of this tracker, e.g. "model 1 loss"
+            client (Client or None): the client that the tracker is connected to
         """
         super(AccuracyTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
         self._accuracy: List[float] = []
@@ -148,46 +165,51 @@ class AccuracyTracker(Tracker):
         self._add_to_server()
     
     def get_accuracies(self, as_np=False) -> Union[List, NDArray]:
-        """
-        Retrieve the collected accuracies.
+        """ Retrieve the collected accuracies.
+        
+        Args:
+            as_np (bool): whether to return values as `numpy` arrays
 
-        :param as_np: whether to return values as `numpy` arrays
-        :return: a list or array of collected accuracies
+        Returns:
+            List or NDArray: collected accuracies
         """
         if as_np:
             return np.array(self._accuracy)
         return self._accuracy
 
     def get_steps(self, as_np=False) -> Union[List, NDArray]:
-        """
-        Retrieve the collected step numbers.
+        """ Retrieve the collected step numbers.
 
-        :param as_np: whether to return values as `numpy` arrays
-        :return: a list or array of steps
-            (we do not assume a regular sequence, so this is necessary)
+        Args:
+            as_np (bool): whether to return values as `numpy` arrays
+        
+        Returns:
+            List or NDarray: steps (we do not assume a regular sequence, so this is necessary)
         """
         if as_np:
             return np.array(self._steps)
         return self._steps
 
     def get_all_tracked(self, as_np=False) -> Tuple[Union[List, NDArray], Union[List, NDArray]]:
-        """
-        Retrieve all collected metrics.
+        """ Retrieve all collected metrics.
 
-        :param as_np: whether to return values as `numpy` arrays
-        :return: a 2-tuple of all collected metrics
+        Args:
+            as_np (bool): whether to return values as `numpy` arrays
+        
+        Returns:
+            Tuple: a 2-tuple of all collected metrics
         """
         if as_np:
             return np.array(self._accuracy), np.array(self._steps)
         return self._accuracy, self._steps
 
     def update(self, predicted: NDArray, labels: NDArray, step: int) -> None:
-        """
-        Update the tracker's metrics.
+        """ Update the tracker's metrics.
 
-        :param predicted: predictions (categorical)
-        :param labels: ground truth labels (categorical)
-        :param step: step for which metrics are being gathered
+        Args:
+            predicted (NDArray): predictions (categorical)
+            labels (NDArray): ground truth labels (categorical)
+            step (int): step for which metrics are being gathered
         """
         n: int = len(labels)
         acc = np.sum(predicted == labels) / n
