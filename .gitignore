@@ -15,3 +15,6 @@ docs/source/_build
 
 # setup.py (local installation) metadata 
 *.egg-info
+
+# mypy
+.mypy_cache/
