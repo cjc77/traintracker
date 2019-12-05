@@ -5,7 +5,7 @@ from traintracker.util.defs import *
 from traintracker.client import Client
 
 
-def unique_id() -> int:
+def unique_id() -> Iterator[int]:
     """ Generate a continuous stream of unique IDs.
 
     First ID is random, next IDs are incremented from initial seed.
@@ -26,7 +26,7 @@ class Tracker(ABC):
     Trackers are utilities that track various metrics
     regarding the performance of a model.
     """
-    id_generator: Generator = unique_id()
+    id_generator: Iterator[int] = unique_id()
     def __init__(self, plot_type: PlotType, name: str, client: Optional[Client] = None):
         """
         Args:

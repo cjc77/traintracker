@@ -47,10 +47,11 @@ class Server:
 
     async def _run_async(self) -> None:
         server = await asyncio.start_server(self._handle_serving, self._host, self. _port)
-        addr: Tuple[str, int] = server.sockets[0].getsockname()
-        print(f"Serving at {addr[0]} on port {addr[1]}")
-        async with server:
-            await server.serve_forever()
+        if server.sockets:
+            addr: Tuple[str, int] = server.sockets[0].getsockname()
+            print(f"Serving at {addr[0]} on port {addr[1]}")
+            async with server:
+                await server.serve_forever()
 
     def _start_plot_server(self) -> None:
         self._plot_server = BokehServer({'/': self._make_document}, port=self._plot_server_port, num_procs=1)
@@ -74,8 +75,8 @@ class Server:
         self._reader = reader
 
         while True:
-            cmd = await self._reader.read(INT32)
-            cmd = int.from_bytes(cmd, BYTEORDER)
+            cmd_bytes = await self._reader.read(INT32)
+            cmd = int.from_bytes(cmd_bytes, BYTEORDER)
             # print(f"Received command: {Cmd(cmd).name}")
 
             # If command is server_shutdown, this is a special case
@@ -89,32 +90,34 @@ class Server:
             await self._handle_cmd(Cmd(cmd))
 
     async def _handle_cmd(self, cmd: Cmd) -> None:
+        if not self._reader:
+            raise AttributeError("Reader cannot be None when handling commands.")
+
         if cmd == Cmd.update_plot:
-            plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
-            plot_id = await self._reader.read(INT32)
-            plot_id = int.from_bytes(plot_id, BYTEORDER)
-            await self._handle_plot_update(plot_id)
+            await self._handle_plot_update(self._reader)
         elif cmd == Cmd.add_plot:
-            plot_type = await self._reader.read(INT32)
-            plot_type = PlotType(int.from_bytes(plot_type, BYTEORDER))
-            plot_id = await self._reader.read(INT32)
-            plot_id = int.from_bytes(plot_id, BYTEORDER)
-            plot_name_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
-            plot_name: bytes = await self._reader.read(plot_name_size)
-            plot_name: str = plot_name.decode()
-            self._add_plot(plot_type, plot_name, plot_id)
+            await self._handle_add_plot(self._reader)
         elif cmd == Cmd.start_plot_server:
             self._start_plot_server()
 
-    async def _handle_plot_update(self, plot_id: int) -> None:
-        new_data_size: int = int.from_bytes(await self._reader.read(INT32), BYTEORDER)
-        new_data: NDArray = np.frombuffer(await self._reader.read(new_data_size),
+    async def _handle_plot_update(self, reader: StreamReader) -> None:
+        plot_id_bytes = await reader.read(INT32)
+        plot_id = int.from_bytes(plot_id_bytes, BYTEORDER)
+        new_data_size: int = int.from_bytes(await reader.read(INT32), BYTEORDER)
+        new_data: NDArray = np.frombuffer(await reader.read(new_data_size),
                                           dtype=np.float32)
         self._queues[plot_id].put(new_data)
 
-    async def _write_and_drain(self, data: bytes) -> None:
-        self._writer.write(data)
-        await self._writer.drain()
+    async def _handle_add_plot(self, reader: StreamReader) -> None:
+        plot_type_bytes = await reader.read(INT32)
+        plot_type = PlotType(int.from_bytes(plot_type_bytes, BYTEORDER))
+        plot_id_bytes = await reader.read(INT32)
+        plot_id = int.from_bytes(plot_id_bytes, BYTEORDER)
+        plot_name_size = int.from_bytes(await reader.read(INT32), BYTEORDER)
+        plot_name_bytes = await reader.read(plot_name_size)
+        plot_name: str = plot_name_bytes.decode()
+
+        self._add_plot(plot_type, plot_name, plot_id)
 
     def _add_plot(self, plot_type: PlotType, plot_name: str, plot_id: int) -> None:
         if plot_id not in self._plots:

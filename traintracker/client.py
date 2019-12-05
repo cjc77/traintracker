@@ -35,14 +35,15 @@ class Client:
         """
         Close connection with the server.
         """
-        self._socket.close()
-        self._socket = None
+        if self._socket:
+            self._socket.close()
+            self._socket = None
 
     def add_plot(self, plot_type: PlotType, plot_name: str, tracker_id: int) -> None:
         self._send_cmd(Cmd.add_plot)
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
         self._safe_send(data)
-        data: bytes = tracker_id.to_bytes(INT32, BYTEORDER)
+        data = tracker_id.to_bytes(INT32, BYTEORDER)
         self._safe_send(data)
         data = plot_name.encode()
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
@@ -52,11 +53,10 @@ class Client:
         self._send_cmd(Cmd.update_plot)
         # data = plot_name.encode()
         data: bytes = plot_id.to_bytes(INT32, BYTEORDER)
-        self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)
 
         if new_data.dtype != np.float32:
-            new_data: np.array = np.array(new_data, dtype=np.float32)
+            new_data = np.array(new_data, dtype=np.float32)
         data = new_data.tobytes()
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)

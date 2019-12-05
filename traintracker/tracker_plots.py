@@ -15,7 +15,6 @@ SOURCE_FORMATS: Dict[PlotType, Dict] = {
     PlotType.test_line_plt: {'x': [], 'y': []}
 }
 
-
 class TrackerPlot(ABC):
     """
     A plot that corresponds to a tracker on the client side.
@@ -27,7 +26,7 @@ class TrackerPlot(ABC):
             name (str): name of this plot
             id_ (int): a unique id that identifies both this plot and the tracker
                 that is related to it.
-            source (ColumnDataSource): a columnar data source from which this plot 
+            source (ColumnDataSource): a columnar data source from which this plot
                 receives updates
         """
         self._name: str = name
@@ -50,6 +49,8 @@ class TrackerPlot(ABC):
             return TrainValLossPlot(name, id_, source)
         elif plot_type == PlotType.accuracy:
             return AccuraccyPlot(name, id_, source)
+        else:
+            raise ValueError(f"{PlotType} is not a valid PlotType.")
 
     @property
     def id(self) -> int:
