@@ -15,11 +15,16 @@ setup(
     version="0.0.1",
     description="Evaluate and monitor model training.",
     long_description=README,
-    url="https://github.com/cjc77/train_tracker",
+    long_description_content_type="text/markdown",
+    url="https://github.com/cjc77/traintracker",
     author="Carson Cook",
     maintainer_email="carsonjamescook@gmail.com",
-    license="MIT",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
     packages=["traintracker", "tests"],
-    python_requires=">=3.5",
+    python_requires=">=3.7",
     install_requires=REQUIREMENTS
 )
