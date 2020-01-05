@@ -116,3 +116,8 @@ class AccuraccyPlot(TrackerPlot):
         self.fig.line(source=self.source, x="step", y="acc", color="blue", legend="accuracy")
         self.fig.xaxis.axis_label = "Step"
         self.fig.yaxis.axis_label = "Accuracy"
+
+
+class ConfusionMatrixPlot(TrackerPlot):
+    pass
+

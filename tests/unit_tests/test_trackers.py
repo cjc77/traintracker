@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
 
-from traintracker.trackers import TrainValLossTracker, AccuracyTracker
+from traintracker.trackers import TrainValLossTracker, AccuracyTracker, ConfusionMatrixTracker
 
 
 class TestTrainValLossTracker(TestCase):
@@ -45,3 +45,68 @@ class TestAccuracyTracker(TestCase):
 
         self.assertEqual(true_acc, pred_acc,
                          f"Accuracy Tracker's computed accuracy {pred_acc} != {true_acc}")
+
+
+class TestConfusionMatrixTracker(TestCase):
+    def test_serverless_connection_update(self):
+        cmt = ConfusionMatrixTracker(10, "cm")
+
+        # No exception raised = pass
+        cmt.update(np.array(['1', '1']), np.array(['0', '1']))
+
+    def test_update_handles_m_lt_new(self):
+        m = 5
+        cmt = ConfusionMatrixTracker(m, "cm")
+        levels = ['0', '1']
+        
+        pred = np.random.choice(levels, size=8)
+        true = np.random.choice(levels, size=8)
+        cmt.update(pred, true)
+        stored = len(cmt.get_predicted())
+        self.assertEqual(stored, m,
+                         msg=(f"First update was of length {8}, tracker should have only {m}          items stored"
+                              f", instead has {stored} items stored"))
+
+    def test_update_handles_m_lt_new_plus_old(self):
+        m = 5
+        cmt = ConfusionMatrixTracker(m, "cm")
+        levels = ['0', '1']
+
+
+        # Pretending we've already streamed some data
+        pred = np.random.choice(levels, size=m-2)
+        true = np.random.choice(levels, size=m-2)
+
+        cmt.update(pred, true)
+        stored = len(cmt.get_predicted())
+        self.assertEqual(stored, m-2, 
+                         msg=(f"Failed to set up for test. First update left incorrect number"
+                              f" length of data in tracker should have been {m-2}"
+                              f", was {stored}"))
+        
+        # Add m
+        pred = np.random.choice(levels, size=m)
+        true = np.random.choice(levels, size=m)
+
+        cmt.update(pred, true)
+        stored = len(cmt.get_predicted())
+        self.assertEqual(stored, m,
+                         msg=f"Stored quantity should be {m} = (min({m-2} + {m}, {m}))")
+
+        # Add > m
+        pred = np.random.choice(levels, size=m+2)
+        true = np.random.choice(levels, size=m+2)
+
+        cmt.update(pred, true)
+        stored = len(cmt.get_predicted())
+        self.assertEqual(stored, m,
+                         msg=f"Stored quantity should be {m} = (min({m-2} + {m} + {m+2}, {m})")
+
+        # Add < m
+        pred = np.random.choice(levels, size=m-2)
+        true = np.random.choice(levels, size=m-2)
+
+        cmt.update(pred, true)
+        stored = len(cmt.get_predicted())
+        self.assertEqual(stored, m,
+                         msg=f"Stored quantity should be {m} = (min({m-2} + {m} + {m+2} + {m-2}, {m})")

@@ -177,7 +177,7 @@ class AccuracyTracker(Tracker):
     def __init__(self, name: str, client: Optional[Client] = None):
         """
         Args: 
-            name (str): the name of this tracker, e.g. "model 1 loss"
+            name (str): the name of this tracker, e.g. "model 1 accuracy"
             client (Client or None): the client that the tracker is connected to
         """
         super(AccuracyTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
@@ -240,3 +240,73 @@ class AccuracyTracker(Tracker):
         if self._client:
             new_data: NDArray = np.array([acc, step], dtype=np.float32)
             self._client.update_plot(self._id, new_data)
+
+
+class ConfusionMatrixTracker(Tracker):
+    """ 
+    A tracker object that keeps a record of a model's categorical accuracies
+    for the past `m` data points.
+    """
+    def __init__(self, m: int, name: str, client: Optional[Client] = None):
+        """ 
+        Args: 
+            m (int): the maximum number of items that will be shown upon updating plots (if applicable)
+            name (str): the name of this tracker, e.g. "model 1 accuracy"
+            client (Client or None): the client that the tracker is connected to
+        """
+        super(ConfusionMatrixTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
+        self._m: int = m
+
+        self._predicted: NDArray = []
+        self._true: NDArray = []
+
+        self._add_to_server()
+
+    def get_predicted(self) -> NDArray:
+        return self._predicted
+
+    def get_true(self) -> NDArray:
+        return self._true
+
+    def get_all_tracked(self, as_np=False) -> Tuple[NDArray, NDArray]:
+        """ Retrieve all collected metrics.
+        
+        Args:
+            as_np (bool): unused
+        
+        Returns:
+            Tuple: a 2-tuple of all collected metrics
+        """
+        return self._predicted, self._true
+
+    def update(self, predicted: NDArray, true: NDArray) -> None:
+        """ Update the trackers metrics.
+        
+        Args:
+            predicted (NDArray): predictions (categorical)
+            true (NDArray): true labels (categorical)
+        """
+        if len(predicted) != len(true):
+            raise AssertionError((f"The length of 'predicted' and 'true' must be identical."
+                                  f" {len(predicted)} does not equal {len(true)}"))
+
+        len_new = len(predicted)
+
+        # Account for m
+        if len_new > self._m:
+            min_idx = len_new - self._m
+            self._predicted = predicted[min_idx:]
+            self._true = true[min_idx:]
+        elif len_new + len(self._predicted) > self._m:
+            tail = self._m - len_new
+            min_idx = len(self._predicted) - tail
+            self._predicted = np.concatenate((self._predicted[min_idx:], predicted))
+            self._true = np.concatenate((self._true[min_idx:], true))
+        else:
+            self._predicted = np.concatenate((self._predicted, predicted))
+            self._true = np.concatenate((self._true, true))
+
+        # TODO: Figure out how to pass data along to the client
+        if self._client:
+            pass
+
