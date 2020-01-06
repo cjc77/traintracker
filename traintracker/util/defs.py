@@ -3,6 +3,7 @@ from enum import IntEnum
 import numpy as np
 
 NDArray = np.ndarray
+NDCharArr = np.chararray
 
 PORT = 54321
 PS_PORT = 12345
@@ -22,6 +23,7 @@ NP_ORDER: Dict[str, str] = {
 class PlotType(IntEnum):
     train_val_loss = 1
     accuracy = 2
+    conf_mtx = 3
     test_line_plt = 99
     random = 100
 

@@ -39,7 +39,7 @@ class Client:
             self._socket.close()
             self._socket = None
 
-    def add_plot(self, plot_type: PlotType, plot_name: str, tracker_id: int) -> None:
+    def add_plot(self, plot_type: PlotType, plot_name: str, tracker_id: int, *args) -> None:
         self._send_cmd(Cmd.add_plot)
         data: bytes = plot_type.to_bytes(INT32, BYTEORDER)
         self._safe_send(data)
@@ -49,14 +49,25 @@ class Client:
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)
 
+        if plot_type == PlotType.conf_mtx:
+            m = args[0]
+            levels: NDCharArr = args[1]
+            print(levels.itemsize)
+            data = m.to_bytes(INT32, BYTEORDER)
+            self._safe_send(data)
+            data = levels.itemsize.to_bytes(INT32, BYTEORDER)
+            self._safe_send(data)
+            data = levels.tobytes()
+            self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
+            self._safe_send(data)
+
     def update_plot(self, plot_id: int, new_data: NDArray) -> None:
         self._send_cmd(Cmd.update_plot)
-        # data = plot_name.encode()
         data: bytes = plot_id.to_bytes(INT32, BYTEORDER)
         self._safe_send(data)
 
-        if new_data.dtype != np.float32:
-            new_data = np.array(new_data, dtype=np.float32)
+        # if new_data.dtype != np.float32:
+        #     new_data = np.array(new_data, dtype=np.float32)
         data = new_data.tobytes()
         self._safe_send(len(data).to_bytes(INT32, BYTEORDER))
         self._safe_send(data)

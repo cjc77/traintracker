@@ -59,9 +59,9 @@ class Tracker(ABC):
         self._client = client
         self._add_to_server()
 
-    def _add_to_server(self) -> None:
+    def _add_to_server(self, *args) -> None:
         if self._client:
-            self._client.add_plot(self._plot_type, self._name, self._id)
+            self._client.add_plot(self._plot_type, self._name, self._id, *args)
 
     @abstractmethod
     def update(self, *args) -> None:
@@ -247,20 +247,35 @@ class ConfusionMatrixTracker(Tracker):
     A tracker object that keeps a record of a model's categorical accuracies
     for the past `m` data points.
     """
-    def __init__(self, m: int, name: str, client: Optional[Client] = None):
+    def __init__(self, m: int, levels, name: str, client: Optional[Client] = None):
         """ 
         Args: 
             m (int): the maximum number of items that will be shown upon updating plots (if applicable)
+            levels (array-like): the different categorical classes
             name (str): the name of this tracker, e.g. "model 1 accuracy"
             client (Client or None): the client that the tracker is connected to
         """
-        super(ConfusionMatrixTracker, self).__init__(name=name, plot_type=PlotType.accuracy)
+        super(ConfusionMatrixTracker, self).__init__(name=name, plot_type=PlotType.conf_mtx)
         self._m: int = m
+        # self._levels: NDCharArr = np.char.asarray(levels, unicode=False)
+        self._levels = levels
+        self._levels_char = np.char.asarray(self._levels, unicode=False)
 
         self._predicted: NDArray = []
         self._true: NDArray = []
 
-        self._add_to_server()
+        self._add_to_server(self._m, np.char.asarray(self._levels, unicode=False))
+
+    def connect_client(self, client: Client) -> None:
+        """ Connect this tracker to a client.
+        
+        Args:
+            client (Client): the client to which this tracker will send its data
+        """
+        if self._client:
+            raise ValueError(f"Cannot add new client, client already exists: {self._client}")
+        self._client = client
+        self._add_to_server(self._m, np.char.asarray(self._levels, unicode=False))
 
     def get_predicted(self) -> NDArray:
         return self._predicted
@@ -279,7 +294,7 @@ class ConfusionMatrixTracker(Tracker):
         """
         return self._predicted, self._true
 
-    def update(self, predicted: NDArray, true: NDArray) -> None:
+    def update(self, predicted, true) -> None:
         """ Update the trackers metrics.
         
         Args:
@@ -308,5 +323,14 @@ class ConfusionMatrixTracker(Tracker):
 
         # TODO: Figure out how to pass data along to the client
         if self._client:
-            pass
+            # Need to make sure that the item sizes of the incoming data are the same as 
+            # what was sent in the "levels" argument to the client & server (if applicable)
+            pred = np.char.asarray(self._predicted, itemsize=self._levels_char.itemsize, unicode=False)
+            true = np.char.asarray(self._true, itemsize=self._levels_char.itemsize, unicode=False)
+            new_data = np.concatenate((pred, true))
+
+            # print(f"Tracker: {self._predicted.__repr__()}")
+            # print(type(new_data))
+            # print(new_data.itemsize)
+            self._client.update_plot(self._id, new_data)
 

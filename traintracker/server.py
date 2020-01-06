@@ -103,9 +103,18 @@ class Server:
     async def _handle_plot_update(self, reader: StreamReader) -> None:
         plot_id_bytes = await reader.read(INT32)
         plot_id = int.from_bytes(plot_id_bytes, BYTEORDER)
+        plot_type = self._plots[plot_id].type
         new_data_size: int = int.from_bytes(await reader.read(INT32), BYTEORDER)
-        new_data: NDArray = np.frombuffer(await reader.read(new_data_size),
-                                          dtype=np.float32)
+        if plot_type == PlotType.conf_mtx:
+            # we must interpret the data as a fixed length char, using
+            # size given when levels were sent over
+            dt = self._plots[plot_id].levels.dtype
+            new_data: NDCharArr = np.frombuffer(await reader.read(new_data_size),
+                                                dtype=dt)
+            new_data.resize((2, len(new_data) // 2))
+        else:
+            new_data: NDArray = np.frombuffer(await reader.read(new_data_size),
+                                              dtype=np.float32)
         self._queues[plot_id].put(new_data)
 
     async def _handle_add_plot(self, reader: StreamReader) -> None:
@@ -117,11 +126,22 @@ class Server:
         plot_name_bytes = await reader.read(plot_name_size)
         plot_name: str = plot_name_bytes.decode()
 
-        self._add_plot(plot_type, plot_name, plot_id)
+        # handle special comm. needs
+        if plot_type == PlotType.conf_mtx:
+            m_bytes = await reader.read(INT32)
+            m = int.from_bytes(m_bytes, BYTEORDER)
+            item_size_bytes = await reader.read(INT32)
+            item_size = int.from_bytes(item_size_bytes, BYTEORDER)
+            levels_size = int.from_bytes(await reader.read(INT32), BYTEORDER)
+            levels = np.frombuffer(await reader.read(levels_size),
+                                   dtype=f"S{item_size}")
+            self._add_plot(plot_type, plot_name, plot_id, m, levels)
+        else:
+            self._add_plot(plot_type, plot_name, plot_id)
 
-    def _add_plot(self, plot_type: PlotType, plot_name: str, plot_id: int) -> None:
+    def _add_plot(self, plot_type: PlotType, plot_name: str, plot_id: int, *args) -> None:
         if plot_id not in self._plots:
-            self._plots[plot_id] = TrackerPlot.build_plot(plot_type, plot_name, plot_id)
+            self._plots[plot_id] = TrackerPlot.build_plot(plot_type, plot_name, plot_id, *args)
             self._queues[plot_id] = Queue()
 
     def _update_plots(self, doc: Document) -> None:
